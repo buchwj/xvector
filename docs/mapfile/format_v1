@@ -1,0 +1,174 @@
+///////////////////////////////////////////////////////////////////////////////
+
+  xVector Engine Technical Documentation
+  Copyright (c) 2010 James Buchwald
+  
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.3
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+    A copy of the license is included in the file "DOCS-LICENSE".
+  
+ -----
+  
+  Documentation for Map File Format V1
+
+///////////////////////////////////////////////////////////////////////////////
+
+===========
+ Overview
+===========
+
+This is the first version of the map file format.  Actually, it is
+most likely a composite of many of the earliest formats built upon
+each other; the V1 designator was kept until technical requirements
+forced an advancement to V2.
+
+V1 is a very simple format and does not support much more than layered
+tiles.  V1 does not support item placement or NPCs; these will be
+added in later formats.
+
+As always, there are actually two different map file formats, one for
+the client and one for the server.  Luckily for us, the server mapfile
+is just an extended version of the client format - they're binary
+compatible out to the beginning of the server data, and the client code
+will ignore the server data altogether.  We do this so that we can hide
+unnecessary information (ie. item locations, hidden triggers, etc.) from
+the client to prevent cheating (the less the player knows, the better -
+consider what would happen if the player could open up a local copy of
+a map and find the destinations of all the teleporters in a teleport maze).
+As such, server-specific data must come last so that it can be trimmed out
+before the maps are sent off to the client.
+
+One might ask why we use our own map file format instead of Python's excellent
+pickle and cPickle modules.  The answer is quite simple: pickle was never
+designed to be secure.  It's quite easy to construct a pickled object that,
+when unpickled, will execute arbitrary code on the client machine.  Such an
+implementation in a client-server game would allow a hacker to mount a
+man-in-the-middle attack against a client by injecting a packet containing
+a maliciously crafted "map" file; this could go as far as to download and
+install a rootkit on the victim's machine.  This is not acceptable behavior,
+and so we must implement our own map file format.  (Python developers, if you
+read this - please give us a secure serialization module in the standard
+library!  It would be much appreciated :))
+
+
+=========================
+ Individual Data Formats
+=========================
+
+Throughout this document you will find tables listing fields and their data
+types.  Some of these data types (int, float, etc.) are self-explanatory.
+Others (utf-8) require some elaboration due to their implementation.
+
+To begin, it should be noted that all data (where applicable) in the map file
+uses little-endian encoding.
+
+UTF-8 strings (type utf-8 in this document) are variable-length strings aligned
+with a single-byte width.  These strings are, of course, encoded using UTF-8.
+They begin with a single 32-bit unsigned integer which indicate the length of
+the encoded string, and are immediately followed by the encoded string.
+
+
+=============
+ Meta-Header
+=============
+
+Like all versions of the map file, the V1 format begins with the "meta-header".
+This is a very small header, only eight bytes long; it is used within xVLib to 
+identify the map file's version. This file is not concerned with this structure,
+as it is universal to all mapfile formats used by xVector; rather, we will start
+at offset 8. With that said, the structure is included below to give a reference
+point. It will not be explained in detail because that would be a waste of time.
+
+Table 1, Metaheader Structure
+
+    type		field
+	-----		------
+	int			Magic number (0xB0501)
+	int			Version ID (1)
+	int			Minimum version for backwards compatibility
+	int			Content flags
+
+The content flags are a 32-bit integer containing XOR'd boolean values as follows:
+
+	bit			flag
+	----		-----
+	0			stripped (set to true when the server has removed information
+						  in order to send this map to the client)
+
+
+========
+ Header
+========
+
+Immediately following the meta-header is the real header.  This header is more
+likely to change between versions of the map file format, so we handle it
+separately from the meta-header.
+
+Table 2, Header Structure
+
+	type		field
+	-----		------
+	utf-8		Map name
+	u-int		Width
+	u-int		Height
+	utf-8		North-border map
+	utf-8		East-border map
+	utf-8		South-border map
+	utf-8		West-border map
+
+	
+==================
+ Tiles and Layers
+==================
+
+Next up are the tiles.  Each tile begins with a 32-bit (4-byte) integer
+containing some XOR'd flags about the tile, as follows.
+
+Table 3, Tile Flags
+
+	bit			flag
+	----		-----
+	0			blocked (players and NPCs cannot pass through tile if set)
+	1..31		unused
+
+Following this is an unsigned integer indicating the number of layers that the
+tile consists of.  Each individual layer is represented by a simple structure;
+it begins with a 32-bit signed integer that specifies the position (with a 
+negative number representing a position below the player, while a positive
+number indicates that the position is above the player; this MUST NOT be 0).
+Lower values indicate that the layer is drawn lower than those with higher
+values (duh).  This is followed by a flags field much like the one in the tile 
+structure.
+
+Table 4, Layer Flags
+
+	bit			flag
+	----		-----
+	0			animation (sprite ID refers to animation if set)
+	1..31		unused
+
+This structure is repeated for as many layers as exist.
+
+Table 5, Tile Structure
+	(Note: These offsets are relative to the start of the tile, not the file)
+	
+	type		field
+	-----		------
+	u-int		flags
+	u-int		numlayers
+	array		sequence of layers
+
+Table 6, Layer Structure
+
+	type		field
+	-----		------
+	s-int		depth (n!=0; 0=NPC+item sprites)
+	u-int		flags
+	u-int		sprite-id (or animation-id if animation flag set)
+
+These tile structures appear in the file one after the other, going by rows.
+In other words, (0,0) is the first tile, then (0,1), then (0,2), then (1,0),
+and so forth.  (Of course, that varies based on your width and height - that's
+just an example.)

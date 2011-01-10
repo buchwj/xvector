@@ -1,0 +1,56 @@
+===============================================
+  Possible Libraries for Python MMORPG Engine
+
+  Last updated July 9, 2010
+===============================================
+
+--------
+ CLIENT
+--------
+
+	SOUND:
+
+		PyAudiere
+			Pros: Multiple file streaming support
+			Cons: No support for OS X
+		
+		pySonic
+			Pros: Everything we need
+			Cons: License hell, especially if this goes commercial in any way
+			
+		Pygame   <<<<<< USE THIS
+			Pros: Everything we need, cross-platform
+			Cons: Big overhead; lots of features we don't need
+		
+		Phonon
+			Pros: Comes with PyQt4, plus support for streaming video
+			Cons: Can't layer sounds (i.e., no SFX on top of BGM)
+				* Consider using this solely for video.  This requires testing
+				  to determine if it can run parallel to Pygame's audio library.
+		
+		PyAudio
+			Pros: Widely cross-platform
+			Cons: Blocking API, would need to be isolated to a separate thread
+				  Unstable ("super-duper alpha quality" according to website)
+	
+	GUI:
+	
+		Using PyQt4.
+		
+	NETWORK:
+	
+		Twisted.
+
+--------
+ SERVER
+--------
+
+	DATABASE:
+	
+		SQLAlchemy    <<<<<<<<< USE THIS
+			Pros: Transparent multi-DB support including SQLite
+			Cons: None
+	
+	NETWORK:
+	
+		Twisted.

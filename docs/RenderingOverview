@@ -1,0 +1,106 @@
+//////////////////////////////////////////////////////////////////////////////
+
+  xVector Engine Technical Documentation
+  Copyright (c) 2010 James Buchwald
+  
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.3
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+    A copy of the license is included in the file "DOCS-LICENSE".
+  
+ -----
+  
+  Rendering System Overview
+
+//////////////////////////////////////////////////////////////////////////////
+
+===========================
+ Low-Level Internals: Qt 4
+===========================
+
+As far as rendering systems go, the xVector renderer is fairly simple.  The
+engine uses Qt 4 to handle GUI elements of the program, so naturally, we
+use Qt 4's graphics calls to render the game.
+
+Qt 4 rendering gives us several advantages.  First, we can render the game
+directly to a widget, allowing for its inclusion anywhere in a Qt 4 window.
+This, in turn, allows us to nest various other widgets around the game widget,
+providing an easy mechanism for us to include a HUD.  Second, Qt 4 is written
+in C++.  This means that the low-level graphics calls (blits and such) are
+compiled directly to machine code optimized for the platform, rather than
+being interpreted by Python.  This allows us to get high FPS rates without
+any fancy tricks despite using an interpreted language such as Python for the
+main engine.
+
+
+=============================
+ The Model-View Architecture
+=============================
+
+The xVector rendering engine was designed to fit the Model-View pattern.
+What this effectively means is that the game logic is completely separated
+from the rendering logic; the rendering objects, or the "views", reflect
+the state of one or more internal logic objects (the "models").
+
+For example, consider the map rendering code.  At the lowest level we have two
+classes, BaseMap and MapRenderer.  Each MapRenderer object holds a reference to
+a BaseMap object (or an object which inherits BaseMap), and draws upon request
+the contents of the map to a surface (either the screen itself or some sort
+of buffer).  In this way, the MapRenderer object acts as a "view" object, and
+the BaseMap object is a "model".
+
+What good does this do?  For one thing, it promotes code reusability.  It
+allows us to use the same data classes (the models) in both the client and
+the server, even though the server itself has no graphical interface.  It
+also promotes code reusability in other ways; these views can be mixed together
+into larger widgets and given new features independent of the data.  For
+example, the MapRenderer is not only used for displaying maps within the game
+itself, but also for displaying maps in the map editor - a completely different
+program with completely different internal logic.
+
+
+=====================
+ The Render Sequence
+=====================
+
+The xVector rendering system begins at a single class, the GameRenderer.
+The GameRenderer is a Qt widget which is responsible for displaying the game to
+the user, minus any HUD component that may be present.
+
+The GameRenderer may contain a single top-level render node.  This is almost
+always a MapField object, which takes a set of MapRender objects and combines
+them together along their borders to form one giant map.  In addition, the
+GameRenderer may optionally render a background image.
+
+The real rendering happens within the MapRender objects.  Each of these objects
+is responsible for rendering exactly one map file.  They beginning by rendering
+the "negative-depth" layers of the map (the layers which appear below the
+players, items, NPCs, etc), starting with the lowest depth layers and working
+their way up.  The negative-depth layers of all tiles will be rendered before
+moving on to the next step.
+
+The fun begins when the MapRender object reaches the "zero-depth", the layer
+where players, items, NPCs, etc. are rendered.  The MapField object holds
+an ordered set of Renderable objects, each of which will be asked to render
+their contents.  Note the distinction - the MapField object itself is
+responsible for handling the zero-depth layers, rather than the individual
+MapRender objects being responsible.
+
+A Renderable object can behave in one of two ways.  The first way is called a
+"tile-based render",  and it attaches the render to a specific location in
+the map.  These objects must respond to requests from the rendering system for
+their location; they must be able to provide the name of their map and the
+X and Y coordinates of their tile.  The rendering system is responsible for
+translating this information into actual X and Y pixel coordinates, which will
+be passed to the Renderable object upon the request to draw.
+
+The second way is called a "sticky render", in that the Renderable object will
+"stick" to another.  Be careful not to "stick" two Renderables to each other;
+this will result in the rendering system not drawing either of them, as they
+will have no absolute position on the map.  Sticky renders are extremely
+powerful if used correctly - they allow features such as dynamic character
+sprites which show the armor the player is wearing, and they allow animations
+to be attached to a sprite (eg. on fire, glowing, etc).
+
+

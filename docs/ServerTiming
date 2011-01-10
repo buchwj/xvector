@@ -1,0 +1,45 @@
+//////////////////////////////////////////////////////////////////////////////
+
+  xVector Engine Technical Documentation
+  Copyright (c) 2010 James Buchwald
+  
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.3
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+    A copy of the license is included in the file "DOCS-LICENSE".
+  
+ -----
+  
+  Server Timing
+
+//////////////////////////////////////////////////////////////////////////////
+
+==============
+ Server Timer
+==============
+
+The server timer must be designed with a number of issues in mind.  These
+issues all stem from the persistent nature of the MMO server; the timer will
+never reset once it has started, and if the server restarts, the timer will
+pick right back up where it left off.
+
+We also want to have a reasonably high-precision timer.  Timing events in
+whole seconds is not precise enough; rather, we want to use milliseconds.  The
+advantages to a millisecond timer are that it provides a level of precision
+greater than that which the average player will observe (try counting to 1000
+in one second), yet it is a precision which is available on almost every
+platform.
+
+The disadvantage of a millisecond timer is the potentially large value the
+timer can have.  The timer will increment by 1000 every second; given an
+unsigned 32-bit integer with a maximum value of 2^32 seconds, this gives us
+about 49 days of runtime before the timer maxes out.  While this might be
+acceptable for a game which is not persistent, MMOs are expected to be around
+for longer than 49 days before the server is reset.
+
+The solution is to use a 64-bit integer - a "long integer" in Python.  These
+give us a maximum value of 2^64, or somewhere around 500 million years.  It
+would be reasonable to assume that no server will operate for 500 million
+years without a reset, nevermind that a player base will survive (literally!)
+for 500 million years.
