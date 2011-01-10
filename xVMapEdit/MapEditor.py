@@ -32,7 +32,7 @@ a future version to provide a simple built-in map tester in which
 the mapper can walk around the map (but without scripts or AIs executing).
 """
 
-from PySide import QtGui
+from PyQt4 import QtGui
 import os
 import sys
 

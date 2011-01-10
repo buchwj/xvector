@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # xVector Engine Client
-# Copyright (c) 2010 James Buchwald
+# Copyright (c) 2011 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -30,7 +30,7 @@ making it easier for mappers to picture how their maps will look in
 the engine.
 """
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 from xVLib import Maps
 import Sprite
 

@@ -19,7 +19,7 @@
 Contains code for nicely reporting errors to the user.
 """
 
-from PySide import QtGui
+from PyQt4 import QtGui
 
 
 # Severity constants

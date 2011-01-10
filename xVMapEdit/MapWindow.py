@@ -20,7 +20,7 @@ Contains code for displaying and editing a map within the editor.
 """
 
 from xVLib import Maps
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 from xVMapEdit import NewMapDialogUI
 
 class NewMapDialog(QtGui.QDialog):

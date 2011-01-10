@@ -19,7 +19,7 @@
 Contains classes for the tile selectors on the left side of the editor.
 """
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 from xVClient import Sprite, MapRender
 from xVLib import Maps
 

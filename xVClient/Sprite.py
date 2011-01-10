@@ -25,7 +25,7 @@ accessed from anywhere, and any changes will be reflected
 in all modules that import this module.
 """
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 import ConfigParser
 import os
 import re

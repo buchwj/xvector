@@ -19,7 +19,7 @@
 Contains the main window class for the map editor.
 """
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 from xVMapEdit import MapEditorUI, MapEditorAboutUI, TileChooser, MapWindow
 from xVClient import Sprite
 

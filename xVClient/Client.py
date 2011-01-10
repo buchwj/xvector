@@ -21,7 +21,7 @@
 Main script for the client.
 """
 
-from PySide import QtGui
+from PyQt4 import QtGui
 import sys
 import gettext
 
