@@ -2,53 +2,61 @@
 
 # Form implementation generated from reading ui file 'NewMapDialog.ui'
 #
-# Created: Fri Jan 07 14:45:14 2011
-#      by: PySide uic UI code generator
+# Created: Mon Jan 10 19:03:49 2011
+#      by: PyQt4 UI code generator 4.8.2
 #
 # WARNING! All changes made in this file will be lost!
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
+
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    _fromUtf8 = lambda s: s
 
 class Ui_NewMapDialog(object):
     def setupUi(self, NewMapDialog):
-        NewMapDialog.setObjectName("NewMapDialog")
+        NewMapDialog.setObjectName(_fromUtf8("NewMapDialog"))
         NewMapDialog.resize(257, 192)
         self.buttonBox = QtGui.QDialogButtonBox(NewMapDialog)
         self.buttonBox.setGeometry(QtCore.QRect(30, 150, 211, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+        self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.groupBox = QtGui.QGroupBox(NewMapDialog)
         self.groupBox.setGeometry(QtCore.QRect(10, 10, 231, 131))
-        self.groupBox.setObjectName("groupBox")
+        self.groupBox.setObjectName(_fromUtf8("groupBox"))
         self.lblMapName = QtGui.QLabel(self.groupBox)
         self.lblMapName.setGeometry(QtCore.QRect(20, 30, 61, 16))
-        self.lblMapName.setObjectName("lblMapName")
+        self.lblMapName.setObjectName(_fromUtf8("lblMapName"))
         self.txtMapName = QtGui.QLineEdit(self.groupBox)
         self.txtMapName.setGeometry(QtCore.QRect(80, 26, 131, 20))
-        self.txtMapName.setObjectName("txtMapName")
+        self.txtMapName.setWhatsThis(_fromUtf8(""))
+        self.txtMapName.setObjectName(_fromUtf8("txtMapName"))
         self.lblWidth = QtGui.QLabel(self.groupBox)
         self.lblWidth.setGeometry(QtCore.QRect(20, 60, 46, 13))
-        self.lblWidth.setObjectName("lblWidth")
+        self.lblWidth.setObjectName(_fromUtf8("lblWidth"))
         self.spnWidth = QtGui.QSpinBox(self.groupBox)
         self.spnWidth.setGeometry(QtCore.QRect(80, 52, 61, 22))
+        self.spnWidth.setWhatsThis(_fromUtf8(""))
         self.spnWidth.setMinimum(1)
         self.spnWidth.setMaximum(99999)
-        self.spnWidth.setProperty("value", 16)
-        self.spnWidth.setObjectName("spnWidth")
+        self.spnWidth.setProperty(_fromUtf8("value"), 16)
+        self.spnWidth.setObjectName(_fromUtf8("spnWidth"))
         self.spnHeight = QtGui.QSpinBox(self.groupBox)
         self.spnHeight.setGeometry(QtCore.QRect(80, 82, 61, 22))
+        self.spnHeight.setWhatsThis(_fromUtf8(""))
         self.spnHeight.setMinimum(1)
         self.spnHeight.setMaximum(99999)
-        self.spnHeight.setProperty("value", 16)
-        self.spnHeight.setObjectName("spnHeight")
+        self.spnHeight.setProperty(_fromUtf8("value"), 16)
+        self.spnHeight.setObjectName(_fromUtf8("spnHeight"))
         self.lblHeight = QtGui.QLabel(self.groupBox)
         self.lblHeight.setGeometry(QtCore.QRect(20, 89, 46, 13))
-        self.lblHeight.setObjectName("lblHeight")
+        self.lblHeight.setObjectName(_fromUtf8("lblHeight"))
 
         self.retranslateUi(NewMapDialog)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), NewMapDialog.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), NewMapDialog.reject)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), NewMapDialog.accept)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), NewMapDialog.reject)
         QtCore.QMetaObject.connectSlotsByName(NewMapDialog)
 
     def retranslateUi(self, NewMapDialog):
