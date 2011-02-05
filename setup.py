@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # xVector Engine
-# Copyright (c) 2010 James Buchwald
+# Copyright (c) 2011 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@ import platform
 if platform.system() == "Windows":
     try:
         import py2exe
-    except ImportError as exc:
+    except ImportError:
         msg = "py2exe not found.  You will not be able to create an EXE."
         print "warning:", msg
 else:
@@ -75,11 +75,11 @@ setup(name='xVector',
       version=ClientVersion.GetVersionString(),
       description='xVector MMORPG Engine (client and map editor)',
       author='James Buchwald',
-      author_email='buchwj@rpi.edu',
+      author_email='nullmech@xvector.org',
       url='http://www.xvector.org',
       license='GPLv2',
       packages=['xVClient', 'xVMapEdit'],
-      requires=['xVLib', 'PySide(>=1.0)'],
+      requires=['xVLib', 'PyQt4(>=4.7)'],
       provides=['xVClient', 'xVMapEdit'],
       scripts=['xVClient/Client.py', 'xVMapEdit/MapEditor.py'],
       data_files=resources,

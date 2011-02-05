@@ -310,3 +310,13 @@ class AboutDialog(QtGui.QDialog):
         # now rig the UI
         self.ui = MapEditorAboutUI.Ui_MapEditorAboutDlg()
         self.ui.setupUi(self)
+        
+        # connect the "About Qt..." button
+        self.connect(self.ui.btnAboutQt, QtCore.SIGNAL("clicked()"),
+                     self.onAboutQt)
+    
+    def onAboutQt(self):
+        """
+        Called when the "About Qt..." button is clicked.
+        """
+        QtGui.QMessageBox.aboutQt(self, "About Qt")

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MapEditorAbout.ui'
 #
-# Created: Mon Jan 10 19:02:28 2011
+# Created: Mon Jan 10 19:41:46 2011
 #      by: PyQt4 UI code generator 4.8.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -28,7 +28,7 @@ class Ui_MapEditorAboutDlg(object):
         MapEditorAboutDlg.setMaximumSize(QtCore.QSize(100000, 100000))
         MapEditorAboutDlg.setModal(True)
         self.buttonBox = QtGui.QDialogButtonBox(MapEditorAboutDlg)
-        self.buttonBox.setGeometry(QtCore.QRect(30, 190, 211, 32))
+        self.buttonBox.setGeometry(QtCore.QRect(170, 190, 91, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(True)
@@ -102,6 +102,9 @@ class Ui_MapEditorAboutDlg(object):
         self.label_4.setScaledContents(False)
         self.label_4.setObjectName(_fromUtf8("label_4"))
         self.gridLayout.addWidget(self.label_4, 0, 0, 1, 1)
+        self.btnAboutQt = QtGui.QPushButton(MapEditorAboutDlg)
+        self.btnAboutQt.setGeometry(QtCore.QRect(178, 168, 75, 23))
+        self.btnAboutQt.setObjectName(_fromUtf8("btnAboutQt"))
 
         self.retranslateUi(MapEditorAboutDlg)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), MapEditorAboutDlg.accept)
@@ -112,5 +115,6 @@ class Ui_MapEditorAboutDlg(object):
         self.label.setText(QtGui.QApplication.translate("MapEditorAboutDlg", "<b><font size=4>xVector MMORPG Engine</font>", None, QtGui.QApplication.UnicodeUTF8))
         self.label_2.setText(QtGui.QApplication.translate("MapEditorAboutDlg", "<font size=7><b><i>Map Editor</i></b></font>", None, QtGui.QApplication.UnicodeUTF8))
         self.label_3.setText(QtGui.QApplication.translate("MapEditorAboutDlg", "<center>Copyright © 2010 James Buchwald<br />Licensed under the GNU GPL, v2 or Later</center>", None, QtGui.QApplication.UnicodeUTF8))
+        self.btnAboutQt.setText(QtGui.QApplication.translate("MapEditorAboutDlg", "&About Qt...", None, QtGui.QApplication.UnicodeUTF8))
 
 import MapEditor_rc

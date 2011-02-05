@@ -157,66 +157,64 @@ class TileChooserView(QtGui.QWidget):
             raise TypeError("event must be of type QPaintEvent")
 
         # Set up our drawing system
-        area = event.region()
-        rects = area.rects()
+        r = event.rect()
         painter = QtGui.QPainter()
         whiteBrush = QtGui.QBrush(QtCore.Qt.white)
         painter.begin(self)
+        painter.setClipRect(r)
+        
+        # Clear the rect so we get a clean paint
+        painter.setBrush(whiteBrush)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.drawRect(r)
 
-        # Figure out what we have to draw
-        for r in rects:
-            # Clear the rect so we get a clean paint
-            painter.setBrush(whiteBrush)
-            painter.setPen(QtCore.Qt.NoPen)
-            painter.drawRect(r)
+        # Figure out which tiles must be redrawn
+        rect_tlx,rect_tly,w,h = r.getRect()
+        tlx, tly = MapRender.GetTileTL(rect_tlx,rect_tly)
+        trx, tRy = MapRender.GetTileTR(rect_tlx + w - 1, rect_tly)
+        brx, bry = MapRender.GetTileBR(rect_tlx + w - 1, rect_tly + h - 1)
+        tiles_wide = (trx - tlx) // Maps.TILE_WIDTH + 1
+        tiles_high = (bry - tly) // Maps.TILE_HEIGHT + 1
+        
+        # Draw the tiles (oh yay, a nested loop)
+        must_draw_selection = False
+        for tile_across in range(tiles_wide):
+            for tile_down in range(tiles_high):
+                # figure out what's going on
+                tile_x = tlx + (tile_across * Maps.TILE_WIDTH)
+                tile_y = tly + (tile_down * Maps.TILE_HEIGHT)
+                tile_id = self._GetTileID(tile_x, tile_y)
 
-            # Figure out which tiles must be redrawn
-            rect_tlx,rect_tly,w,h = r.getRect()
-            tlx, tly = MapRender.GetTileTL(rect_tlx,rect_tly)
-            trx, tRy = MapRender.GetTileTR(rect_tlx + w - 1, rect_tly)
-            brx, bry = MapRender.GetTileBR(rect_tlx + w - 1, rect_tly + h - 1)
-            tiles_wide = (trx - tlx) // Maps.TILE_WIDTH + 1
-            tiles_high = (bry - tly) // Maps.TILE_HEIGHT + 1
-            
-            # Draw the tiles (oh yay, a nested loop)
-            must_draw_selection = False
-            for tile_across in range(tiles_wide):
-                for tile_down in range(tiles_high):
-                    # figure out what's going on
-                    tile_x = tlx + (tile_across * Maps.TILE_WIDTH)
-                    tile_y = tly + (tile_down * Maps.TILE_HEIGHT)
-                    tile_id = self._GetTileID(tile_x, tile_y)
+                # check if that tile exists
+                if tile_id not in self.model.spriteset:
+                    # doesn't exist
+                    continue
 
-                    # check if that tile exists
-                    if tile_id not in self.model.spriteset:
-                        # doesn't exist
-                        continue
+                # draw the tile
+                tile = self.model.spriteset[tile_id]
+                painter.drawPixmap(tile_x,tile_y,tile)
 
-                    # draw the tile
-                    tile = self.model.spriteset[tile_id]
-                    painter.drawPixmap(tile_x,tile_y,tile)
+                # check if we will need to draw the selection border
+                if tile_id == self.model.selected:
+                    must_draw_selection = True
 
-                    # check if we will need to draw the selection border
-                    if tile_id == self.model.selected:
-                        must_draw_selection = True
+        # do we need to draw the selection border?
+        if must_draw_selection:
+            # get selection information
+            tile_id = self.model.selected
+            tile_x, tile_y = self._GetTLFromID(tile_id)
 
-            # do we need to draw the selection border?
-            if must_draw_selection:
-                # get selection information
-                tile_id = self.model.selected
-                tile_x, tile_y = self._GetTLFromID(tile_id)
-
-                # draw the selection border
-                painter.save()
-                painter.setPen(self.selectorPen)
-                painter.setBrush(QtCore.Qt.NoBrush)
-                target = QtCore.QRect()
-                target.setX(tile_x)
-                target.setY(tile_y)
-                target.setWidth(Maps.TILE_WIDTH)
-                target.setHeight(Maps.TILE_HEIGHT)
-                painter.drawRect(target)
-                painter.restore()
+            # draw the selection border
+            painter.save()
+            painter.setPen(self.selectorPen)
+            painter.setBrush(QtCore.Qt.NoBrush)
+            target = QtCore.QRect()
+            target.setX(tile_x)
+            target.setY(tile_y)
+            target.setWidth(Maps.TILE_WIDTH)
+            target.setHeight(Maps.TILE_HEIGHT)
+            painter.drawRect(target)
+            painter.restore()
 
         # Clean up
         painter.end()

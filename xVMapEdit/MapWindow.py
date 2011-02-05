@@ -20,6 +20,7 @@ Contains code for displaying and editing a map within the editor.
 """
 
 from xVLib import Maps
+from xVClient import MapRender
 from PyQt4 import QtCore, QtGui
 from xVMapEdit import NewMapDialogUI
 
@@ -65,7 +66,7 @@ class NewMapDialog(QtGui.QDialog):
         print "[debug] NewMapDialog.OnCancel()"    # TODO: Implement
 
 
-class MapWindow(QtGui.QDialog):
+class MapWindow(QtGui.QMdiSubWindow):
     """
     Window class that contains a map.
 
@@ -74,19 +75,31 @@ class MapWindow(QtGui.QDialog):
     is contained within a QScrollBox widget.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, map=None):
         """
         Sets up the basic window.
 
         @type parent: QtGui.QWidget
         @param parent: Parent GUI object (should be the MDI area)
         """
-        # call QDialog's initializer
-        super(QtGui.QDialog, self).__init__(parent)
+        # call the parent initializer
+        super(MapWindow, self).__init__(parent)
 
         # create the scroll area and add it
         self.ScrollArea = QtGui.QScrollArea(parent=self)
         """The scroll area that contains the MapWidget."""
+        
+        # create the status bar and add it
+        self.StatusBar = QtGui.QStatusBar(parent=self)
+        """The status bar of the window."""
+        self.CoordinateLabel = QtGui.QLabel(parent=self.StatusBar)
+        """Shows the coordinates of the moused-over tile."""
+        self.CoordinateLabel.setText("(0,0)")
+        self.StatusBar.addPermanentWidget(self.CoordinateLabel)
+        
+        # create our map widget and add it
+        self.MapWidget = MapWidget(parent=self.ScrollArea, map=map)
+        self.ScrollArea.setWidget(self.MapWidget)
 
 
 class MapWidget(QtGui.QWidget):
@@ -116,7 +129,7 @@ class MapWidget(QtGui.QWidget):
         return self._map
     
     @map.setter
-    def map(self,newmap):
+    def map(self, newmap):
         # typecheck
         if not isinstance(newmap,Maps.BaseMap):
             raise TypeError("map must inherit Maps.BaseMap")
@@ -126,9 +139,7 @@ class MapWidget(QtGui.QWidget):
         """
         Called when the widget needs to be redrawn to the screen.
 
-        This is an overloaded function from QtGui.QWidget.
-
-        @type event: QtGui.QPaintEvent
+        @type event: C{QtGui.QPaintEvent}
         @param event: Event information object
         """
         # typecheck the event
@@ -136,4 +147,58 @@ class MapWidget(QtGui.QWidget):
             raise TypeError("event must be of type QtGui.QPaintEvent")
 
         # figure out what we need to redraw
+        rect = event.rect()
+        rx1, ry1, rx2, ry2 = rect.getCoords()
+        tlx, tly = MapRender.GetTileTL(rx1, ry1)
+        brx, bry = MapRender.GetTileBR(rx2, ry2)
+        tiles_wide = (brx - tlx) // Maps.TILE_WIDTH
+        base_w = tlx // Maps.TILE_WIDTH
+        tiles_high = (bry - tly) // Maps.TILE_HEIGHT
+        base_h = tly // Maps.TILE_HEIGHT
         
+        # get an active painter 
+        painter = QtGui.QPainter()
+        painter.begin(self)
+        painter.setClipRect(rect)
+        
+        # white-out our target
+        whiteBrush = QtGui.QBrush(QtCore.Qt.white)
+        painter.fillRect(rect, whiteBrush)
+        
+        # DRAW. THE. TILES. (left to right, top to bottom)
+        for rel_tileY in range(tiles_high):
+            tileY = base_h + rel_tileY
+            for rel_tileX in range(tiles_wide):
+                # check if tile is in bounds
+                tileX = base_w + rel_tileX
+                if tileX > self.map.header.width:
+                    # out of bounds, don't draw anything
+                    continue
+                elif tileY > self.map.header.height:
+                    # out of bounds, don't draw anything
+                    continue
+                
+                # figure out what we're drawing
+                try:
+                    tile = self.map.tiles[tileX][tileY]
+                except IndexError:
+                    # the tile grid does NOT agree with the map header!
+                    # insert a blank tile here!
+                    try:
+                        self.map.tiles[tileX][tileY] = Maps.Tile()
+                    except:
+                        # something is seriously wrong
+                        raise Maps.MapError("OHNO (TODO: write real error)")     
+    
+    def sizeHint(self):
+        """
+        Calculates the size of the full widget.
+        
+        This finds the size of the <i>entire</i> widget, not just the
+        portion visible in the scroll window.
+        
+        @returns: A C{QtCore.QSize} object containing the size of the widget.
+        """
+        width = self.map.header.width * Maps.TILE_WIDTH
+        height = self.map.header.height * Maps.TILE_HEIGHT
+        return QtCore.QSize(width, height)

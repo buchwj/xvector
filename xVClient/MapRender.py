@@ -42,6 +42,14 @@ def GetTileTL(x, y):
     Given an (x,y) coordinate pair of a point within a tile, this
     method calculates the (x,y) coordinate pair of the top-left
     corner of the tile.  These are returned as a tuple.
+    
+    @type x: integer
+    @param x: X-coordinate of the point to check
+    
+    @type y: integer
+    @param y: Y-coordinate of the point to check
+    
+    @returns: The (x,y) coordinates in tuple form.
     """
     # Validity check of the (x,y) coordinate pair
     if x < 0 or y < 0:
@@ -62,6 +70,14 @@ def GetTileTR(x, y):
     Given an (x,y) coordinate pair of a point within a tile, this
     method calculates the (x,y) coordinate pair of the top-right
     corner of the tile.  These are returned as a tuple.
+    
+    @type x: integer
+    @param x: X-coordinate of the point to check
+    
+    @type y: integer
+    @param y: Y-coordinate of the point to check
+    
+    @returns: The (x,y) coordinates in tuple form.
     """
     # Validity check of the (x,y) coordinate pair
     if x < 0 or y < 0:
@@ -80,6 +96,14 @@ def GetTileBL(x, y):
     Given an (x,y) coordinate pair of a point within a tile, this
     method calculates the (x,y) coordinate pair of the bottom-left
     corner of the tile.  These are returned as a tuple.
+    
+    @type x: integer
+    @param x: X-coordinate of the point to check
+    
+    @type y: integer
+    @param y: Y-coordinate of the point to check
+    
+    @returns: The (x,y) coordinates in tuple form.
     """
     # Validity check of the (x,y) coordinate pair
     if x < 0 or y < 0:
@@ -98,6 +122,14 @@ def GetTileBR(x, y):
     Given an (x,y) coordinate pair of a point within a tile, this
     method calculates the (x,y) coordinate pair of the bottom-right
     corner of the tile.  These are returned as a tuple.
+    
+    @type x: integer
+    @param x: X-coordinate of the point to check
+    
+    @type y: integer
+    @param y: Y-coordinate of the point to check
+    
+    @returns: The (x,y) coordinates in tuple form.
     """
     # Validity check of the (x,y) coordinate pair
     if x < 0 or y < 0:
