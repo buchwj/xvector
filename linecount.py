@@ -1,4 +1,5 @@
-## {{{ http://code.activestate.com/recipes/527746/ (r1)
+#!/usr/bin/python
+
 import os
 import fnmatch
 
