@@ -129,8 +129,8 @@ class ClientConfig(object):
     
     # And now, of course, we have our easy-access properties.
     # These are the preferred APIs since they save their changes.
-    @Property
-    def fullscreen():
+    @property
+    def fullscreen(self):
         """If true, the game will run in fullscreen mode."""
         def fget(self):
             return self.GetBoolOption("fullscreen")
@@ -140,8 +140,8 @@ class ClientConfig(object):
         def fdel(self):
             self.parser.remove_option(MAIN_SECTION, "fullscreen")
     
-    @Property
-    def locale():
+    @property
+    def locale(self):
         """The locale in use by the client."""
         def fget(self):
             return self.GetOption("locale")

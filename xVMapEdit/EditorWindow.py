@@ -1,5 +1,5 @@
 # xVector Engine Map Editor
-# Copyright (c) 2010 James Buchwald
+# Copyright (c) 2011 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -32,11 +32,9 @@ class ResourceToggle(object):
     # A few constants...
     ID_Tiles = 1
     """Button ID of the tiles button"""
-    ID_Anim = 2
-    """Button ID of the animations button"""
-    ID_Items = 3
+    ID_Items = 2
     """Button ID of the items button"""
-    ID_NPCs = 4
+    ID_NPCs = 3
     """Button ID of the NPCs button"""
     
     def __init__(self, window):
@@ -61,14 +59,6 @@ class ResourceToggle(object):
         self.TileButton.setChecked(True)
         self.TileButton.setToolTip(_("Static Tiles"))
         self.ButtonGroup.addButton(self.TileButton, self.ID_Tiles)
-        
-        self.AnimButton = QtGui.QToolButton()
-        anim_icon = QtGui.QIcon()
-        anim_icon.addPixmap(QtGui.QPixmap(":/ResourceIcons/res/AnimationsIcon.png"))
-        self.AnimButton.setIcon(anim_icon)
-        self.AnimButton.setCheckable(True)
-        self.AnimButton.setToolTip(_("Animated Tiles"))
-        self.ButtonGroup.addButton(self.AnimButton, self.ID_Anim)
         
         self.ItemButton = QtGui.QToolButton()
         item_icon = QtGui.QIcon()
@@ -99,7 +89,6 @@ class ResourceToggle(object):
         @param toolbar: Toolbar to attach the buttons to.
         """
         toolbar.addWidget(self.TileButton)
-        toolbar.addWidget(self.AnimButton)
         toolbar.addWidget(self.ItemButton)
         toolbar.addWidget(self.NPCButton)
     
@@ -113,8 +102,6 @@ class ResourceToggle(object):
         if id == self.ID_Tiles:
             view = self.MainWindow.chooserviews["tiles"]
             self.MainWindow.ui.ResourceScroll.setWidget(view)
-        elif id == self.ID_Anim:
-            pass    # TODO: Implement
         elif id == self.ID_Items:
             pass    # TODO: Implement
         elif id == self.ID_NPCs:

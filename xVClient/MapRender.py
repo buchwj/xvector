@@ -156,15 +156,12 @@ class MapRenderer(object):
     object of this class can only render one map at a time.
     """
 
-    def __init__(self, map=None, zero_hook=None):
+    def __init__(self, map=None):
         """
         Initializes a new renderer.
 
         @type map: L{Maps.BaseMap}
         @param map: Optional map to use in this renderer.
-        
-        @type zero_hook:
-        @param zero_hook: A zero-depth rendering hook.
         """
         # set up our attributes
         self.map = map
@@ -402,4 +399,4 @@ class MapRenderer(object):
         else:
             # static layer
             sprite = Sprite.GetSpriteSet("tiles")[layer.content_id]
-            painter.drawPixmap(dst_rect, sprite)
+            painter.drawPixmap(dst_rect, sprite.img)

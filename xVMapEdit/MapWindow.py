@@ -188,7 +188,7 @@ class MapWidget(QtGui.QWidget):
                         self.map.tiles[tileX][tileY] = Maps.Tile()
                     except:
                         # something is seriously wrong
-                        raise Maps.MapError("OHNO (TODO: write real error)")     
+                        raise Maps.MapError("tile was nonexistant and could not be created")     
     
     def sizeHint(self):
         """

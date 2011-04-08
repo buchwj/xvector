@@ -2,61 +2,61 @@
 
 # Form implementation generated from reading ui file 'NewMapDialog.ui'
 #
-# Created: Mon Jan 10 19:03:49 2011
-#      by: PyQt4 UI code generator 4.8.2
+# Created: Thu Apr  7 18:41:47 2011
+#      by: PyQt4 UI code generator 4.7.4
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt4 import QtCore, QtGui
 
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    _fromUtf8 = lambda s: s
-
 class Ui_NewMapDialog(object):
     def setupUi(self, NewMapDialog):
-        NewMapDialog.setObjectName(_fromUtf8("NewMapDialog"))
+        NewMapDialog.setObjectName("NewMapDialog")
         NewMapDialog.resize(257, 192)
         self.buttonBox = QtGui.QDialogButtonBox(NewMapDialog)
         self.buttonBox.setGeometry(QtCore.QRect(30, 150, 211, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
+        self.buttonBox.setObjectName("buttonBox")
         self.groupBox = QtGui.QGroupBox(NewMapDialog)
         self.groupBox.setGeometry(QtCore.QRect(10, 10, 231, 131))
-        self.groupBox.setObjectName(_fromUtf8("groupBox"))
-        self.lblMapName = QtGui.QLabel(self.groupBox)
-        self.lblMapName.setGeometry(QtCore.QRect(20, 30, 61, 16))
-        self.lblMapName.setObjectName(_fromUtf8("lblMapName"))
-        self.txtMapName = QtGui.QLineEdit(self.groupBox)
-        self.txtMapName.setGeometry(QtCore.QRect(80, 26, 131, 20))
-        self.txtMapName.setWhatsThis(_fromUtf8(""))
-        self.txtMapName.setObjectName(_fromUtf8("txtMapName"))
-        self.lblWidth = QtGui.QLabel(self.groupBox)
-        self.lblWidth.setGeometry(QtCore.QRect(20, 60, 46, 13))
-        self.lblWidth.setObjectName(_fromUtf8("lblWidth"))
-        self.spnWidth = QtGui.QSpinBox(self.groupBox)
-        self.spnWidth.setGeometry(QtCore.QRect(80, 52, 61, 22))
-        self.spnWidth.setWhatsThis(_fromUtf8(""))
+        self.groupBox.setObjectName("groupBox")
+        self.widget = QtGui.QWidget(self.groupBox)
+        self.widget.setGeometry(QtCore.QRect(0, 30, 231, 95))
+        self.widget.setObjectName("widget")
+        self.formLayout = QtGui.QFormLayout(self.widget)
+        self.formLayout.setObjectName("formLayout")
+        self.lblMapName = QtGui.QLabel(self.widget)
+        self.lblMapName.setObjectName("lblMapName")
+        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.lblMapName)
+        self.txtMapName = QtGui.QLineEdit(self.widget)
+        self.txtMapName.setWhatsThis("")
+        self.txtMapName.setObjectName("txtMapName")
+        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.txtMapName)
+        self.lblWidth = QtGui.QLabel(self.widget)
+        self.lblWidth.setObjectName("lblWidth")
+        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.lblWidth)
+        self.spnWidth = QtGui.QSpinBox(self.widget)
+        self.spnWidth.setWhatsThis("")
         self.spnWidth.setMinimum(1)
         self.spnWidth.setMaximum(99999)
-        self.spnWidth.setProperty(_fromUtf8("value"), 16)
-        self.spnWidth.setObjectName(_fromUtf8("spnWidth"))
-        self.spnHeight = QtGui.QSpinBox(self.groupBox)
-        self.spnHeight.setGeometry(QtCore.QRect(80, 82, 61, 22))
-        self.spnHeight.setWhatsThis(_fromUtf8(""))
+        self.spnWidth.setProperty("value", 16)
+        self.spnWidth.setObjectName("spnWidth")
+        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.spnWidth)
+        self.lblHeight = QtGui.QLabel(self.widget)
+        self.lblHeight.setObjectName("lblHeight")
+        self.formLayout.setWidget(2, QtGui.QFormLayout.LabelRole, self.lblHeight)
+        self.spnHeight = QtGui.QSpinBox(self.widget)
+        self.spnHeight.setWhatsThis("")
         self.spnHeight.setMinimum(1)
         self.spnHeight.setMaximum(99999)
-        self.spnHeight.setProperty(_fromUtf8("value"), 16)
-        self.spnHeight.setObjectName(_fromUtf8("spnHeight"))
-        self.lblHeight = QtGui.QLabel(self.groupBox)
-        self.lblHeight.setGeometry(QtCore.QRect(20, 89, 46, 13))
-        self.lblHeight.setObjectName(_fromUtf8("lblHeight"))
+        self.spnHeight.setProperty("value", 16)
+        self.spnHeight.setObjectName("spnHeight")
+        self.formLayout.setWidget(2, QtGui.QFormLayout.FieldRole, self.spnHeight)
 
         self.retranslateUi(NewMapDialog)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), NewMapDialog.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), NewMapDialog.reject)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), NewMapDialog.accept)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), NewMapDialog.reject)
         QtCore.QMetaObject.connectSlotsByName(NewMapDialog)
 
     def retranslateUi(self, NewMapDialog):

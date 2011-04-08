@@ -41,110 +41,86 @@
    <property name="title">
     <string>Options</string>
    </property>
-   <widget class="QLabel" name="lblMapName">
+   <widget class="QWidget" name="">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>0</x>
       <y>30</y>
-      <width>61</width>
-      <height>16</height>
+      <width>231</width>
+      <height>95</height>
      </rect>
     </property>
-    <property name="whatsThis">
-     <string>This is the name of the map which will be visible to players while they are on it.</string>
-    </property>
-    <property name="text">
-     <string>Map Name:</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="txtMapName">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>26</y>
-      <width>131</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="whatsThis">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lblWidth">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>60</y>
-      <width>46</width>
-      <height>13</height>
-     </rect>
-    </property>
-    <property name="whatsThis">
-     <string>This is the width of the map, in tiles.</string>
-    </property>
-    <property name="text">
-     <string>Width:</string>
-    </property>
-   </widget>
-   <widget class="QSpinBox" name="spnWidth">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>52</y>
-      <width>61</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="whatsThis">
-     <string/>
-    </property>
-    <property name="minimum">
-     <number>1</number>
-    </property>
-    <property name="maximum">
-     <number>99999</number>
-    </property>
-    <property name="value">
-     <number>16</number>
-    </property>
-   </widget>
-   <widget class="QSpinBox" name="spnHeight">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>82</y>
-      <width>61</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="whatsThis">
-     <string/>
-    </property>
-    <property name="minimum">
-     <number>1</number>
-    </property>
-    <property name="maximum">
-     <number>99999</number>
-    </property>
-    <property name="value">
-     <number>16</number>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lblHeight">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>89</y>
-      <width>46</width>
-      <height>13</height>
-     </rect>
-    </property>
-    <property name="whatsThis">
-     <string>This is the height of the map, in tiles.</string>
-    </property>
-    <property name="text">
-     <string>Height:</string>
-    </property>
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="lblMapName">
+       <property name="whatsThis">
+        <string>This is the name of the map which will be visible to players while they are on it.</string>
+       </property>
+       <property name="text">
+        <string>Map Name:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="txtMapName">
+       <property name="whatsThis">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="lblWidth">
+       <property name="whatsThis">
+        <string>This is the width of the map, in tiles.</string>
+       </property>
+       <property name="text">
+        <string>Width:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="spnWidth">
+       <property name="whatsThis">
+        <string/>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>99999</number>
+       </property>
+       <property name="value">
+        <number>16</number>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblHeight">
+       <property name="whatsThis">
+        <string>This is the height of the map, in tiles.</string>
+       </property>
+       <property name="text">
+        <string>Height:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QSpinBox" name="spnHeight">
+       <property name="whatsThis">
+        <string/>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>99999</number>
+       </property>
+       <property name="value">
+        <number>16</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
  </widget>

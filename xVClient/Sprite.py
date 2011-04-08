@@ -1,5 +1,5 @@
 # xVector Engine Client
-# Copyright (c) 2010 James Buchwald
+# Copyright (c) 2011 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -29,18 +29,23 @@ from PyQt4 import QtCore, QtGui
 import ConfigParser
 import os
 import re
+import sys
 
 import ClientPaths
 import ErrorReporting
 
 # And here, of course, are those nasty little global variables
 # that we need in this case for cross-module sprite access.
-_spritesets = None
+spritesets = None
 """The dictionary of spritesets as loaded by LoadAllSprites()"""
 
 
 class SpriteLoadFailure(Exception): pass
 """Raised if the sprites fail to load for any reason."""
+
+
+class NonAnimationException(Exception): pass
+'''Raised if SpriteInfoParser.GetAnimationBaseID() is called for a static sprite.'''
 
 
 class SpriteInfoParser(object):
@@ -61,25 +66,103 @@ class SpriteInfoParser(object):
         self.parser = ConfigParser.SafeConfigParser(self.GetDefaults())
         self.parser.read(cfgfilepath)
         
+        # Build the animation table
+        self.animtable = []
+        for i in range(self.animcount):
+            self.animtable.append(self.GetAnimationBlock(i))
+        
     @property
     def type(self):
-        return self.parser.get(self.main_section, "Type")
+        try:
+            return self.parser.get(self.main_section, "Type")
+        except ValueError:
+            return ""
 
     @property
     def width(self):
-        return self.parser.getint(self.main_section, "SpriteWidth")
+        try:
+            return self.parser.getint(self.main_section, "SpriteWidth")
+        except ValueError:
+            return 0
 
     @property
     def height(self):
-        return self.parser.getint(self.main_section, "SpriteHeight")
+        try:
+            return self.parser.getint(self.main_section, "SpriteHeight")
+        except ValueError:
+            return 0
+
+    @property
+    def animcount(self):
+        try:
+            return self.parser.getint(self.main_section, "AnimationCount")
+        except ValueError:
+            return 0
 
     @property
     def author(self):
-        return self.parser.get(self.credits_section, "Author")
+        try:
+            return self.parser.get(self.credits_section, "Author")
+        except ValueError:
+            return ""
 
     @property
     def site(self):
-        return self.parser.get(self.credits_section, "Site")
+        try:
+            return self.parser.get(self.credits_section, "Site")
+        except ValueError:
+            return ""
+    
+    def GetAnimationBlock(self, n):
+        '''
+        Gets the boundaries of the given animation block.
+        
+        @type n: integer
+        @param n: Sequence number of this animation in the file.
+        
+        @note:
+        "Sequence ID" in this case refers to the position within the single
+        file, with the top-left tile being 0 and increasing to the right.
+        It is not the unique ID of the sprite in the full spriteset.
+        
+        @return: An integer tuple in the form of (starttile, endtile).
+        '''
+        # do we have this animation?
+        animsect = "Animation" + str(n)
+        if not self.parser.has_section(animsect):
+            # nope
+            raise IndexError("Animation " + str(n) + " not found.")
+        
+        # get animation information
+        try:
+            start = self.parser.getint(animsect, "Start")
+            end = self.parser.getint(animsect, "End")
+        except ConfigParser.Error as e:
+            raise SpriteLoadFailure(e)
+        if start < 0 or end < 0:
+            raise SpriteLoadFailure("Animation " + str(n) + " is out of bounds.")
+    
+    def GetAnimationBaseID(self, n):
+        '''
+        Gets the animation sequence ID.
+        
+        @note:
+        "Sequence ID" in this case refers to the position within the single
+        file, with the top-left tile being 0 and increasing to the right.
+        It is not the unique ID of the sprite in the full spriteset.
+        
+        @type n: integer
+        @param n: Sequence ID of the sprite in question.
+        
+        @raise NonAnimationException
+        Raised if the sequence given by C{n} is not an animation frame.
+        
+        @return: The sequence ID of the first frame of the animation.
+        '''
+        for start, end in self.animtable:
+            if start <= n <= end:
+                return start
+        raise NonAnimationException
 
     def GetDefaults(self):
         """
@@ -90,15 +173,13 @@ class SpriteInfoParser(object):
         defaults['Type'] = "General"
         defaults['SpriteWidth'] = 32
         defaults['SpriteHeight'] = 32
+        defaults['AnimationCount'] = 0
         return defaults
 
 
-class Sprite(QtGui.QPixmap):
+class Sprite(object):
     """
     A single sprite.
-    
-    This can be used directly as a QPixmap for rendering, but it
-    also contains additional information related to the sprite.
     """
     
     def __init__(self, width, height, type="General", id=0):
@@ -109,10 +190,11 @@ class Sprite(QtGui.QPixmap):
         These can be set later through modifier methods.
         """
         # Initialize the QPixmap portion
-        super(Sprite, self).__init__(width,height)
+        self._img = QtGui.QPixmap(width, height)
+        '''Underlying pixmap to be rendered.'''
         
         # Clear to transparency (otherwise alpha-blending won't work later)
-        self.fill(QtGui.QColor("transparent"))
+        self._img.fill(QtCore.Qt.transparent)
         
         # Declare some new attributes
         self.sprite_type = type
@@ -120,6 +202,65 @@ class Sprite(QtGui.QPixmap):
         
         self.sprite_id = id
         """ID of this sprite (integer)"""
+    
+    @property
+    def img(self):
+        '''
+        Property method for the underyling image data of the sprite.
+        
+        This is very useful in subclasses if overridden.  It allows the underlying
+        image data to point to any pixmap and to change randomly.  For an example
+        of when this is useful, see the AnimatedSprite subclass.
+        '''
+        return self._img
+    
+    @img.setter
+    def img(self, newimg):
+        self._img = newimg
+
+
+class AnimatedSprite(Sprite):
+    '''A sprite which consists of several frames.'''
+    
+    def __init__(self, width, height, delay=10):
+        '''Initializes a blank animated sprite.'''
+        # set up the underlying sprite infrastructure
+        super(self, AnimatedSprite).__init__(width, height)
+        
+        # set our time-control variables
+        self.delay = delay
+        self.current_frame = 0
+        
+        # and set up our frameset
+        self.frames = []
+    
+    @property
+    def img(self):
+        '''Property method for the current frame of the animation.'''
+        return self.frames[self.current_frame]
+    
+    @img.setter
+    def img(self, newimg):
+        self.frames[self.current_frame] = newimg
+    
+    def PumpAnimation(self, curtime):
+        '''
+        Advances to the appropriate frame.
+        
+        Called from the main loop once per frame.
+        
+        @type curtime: integer
+        @param curtime: Current engine "tick" (in milliseconds)
+        
+        @note:
+        You should only expect the engine to call this about once every 25ms (f=40Hz).
+        In other words, your sprite-based animations are limited to about 40 frames
+        per second.  You probably won't need to go that high, though.
+        '''
+        # calculate stuff
+        bigDelay = len(self.frames) * self.delay
+        relativeTick = curtime % bigDelay
+        self.current_frame = relativeTick // self.delay
 
 
 class SpritesheetException(Exception): pass
@@ -131,7 +272,7 @@ class SpriteSet(dict):
     Loads sprites from the appropriate directory and provides a mechanism
     to access them.
 
-    A spriteset actually inherits from the Python C{dict}; as such, sprites
+    A spriteset inherits from the Python C{dict}; as such, sprites
     can be accessed by their IDs using an expression of the form
     C{spriteset[id]}.  For example, to access sprite 5, the code would be
     C{spriteset[5]}.
@@ -142,8 +283,21 @@ class SpriteSet(dict):
         Creates a spriteset with default values.
         """
         self.sprites = list()
+        '''Contains all of the sprites belonging to this set ordered by ID.'''
+        
         self.type = "General"
+        '''The type of sprite contained in this set.'''
+        
         self._idct = 0
+        '''
+        Counter variable used internally for ID assignment to multiple files.
+        '''
+        
+        self._animations = []
+        '''
+        List of all animations contained in self.sprites.
+        Used internally for framerate control.
+        '''
 
     def LoadFile(self, metafile):
         """
@@ -155,6 +309,8 @@ class SpriteSet(dict):
         """
         # grab the metafile
         meta = SpriteInfoParser(metafile)
+        
+        start_id = self._idct
 
         # now grab the image file
         filepath = metafile[:len(metafile)-4] + "png"
@@ -193,24 +349,57 @@ class SpriteSet(dict):
             width = meta.width
             height = meta.height
             type = meta.type
-            newsprite = Sprite(width,height,type,self._idct)
-            self._idct = self._idct + 1
-            painter = QtGui.QPainter()
-            painter.begin(newsprite)
-            painter.drawPixmap(QtCore.QPoint(0,0), sheet,
-                QtCore.QRect(QtCore.QPoint(cur_xcoordUL,cur_ycoordUL),
-                             QtCore.QPoint(cur_xcoordBR,cur_ycoordBR)))
+            
+            try:
+                # this will except if this isn't an animation frame
+                baseID = start_id + meta.GetAnimationBaseID(i)
+                
+                # if we make it here, this is an animation.
+                # create the new animation if this is the first frame
+                if baseID not in self.sprites:
+                    self.sprites[baseID] = AnimatedSprite(width, height,type,self._idct)
+                    self._animations.append(self.sprites[baseID])
+                anim = self.sprites[baseID]
+                
+                # load the frame
+                frame = len(anim.frames)
+                anim.frames[frame] = QtGui.QPixmap(width, height)
+                anim.frames[frame].fill(QtCore.Qt.transparent)
+                painter = QtGui.QPainter()
+                painter.begin(anim.frames[frame])
+                painter.drawPixmap(QtCore.QPoint(0,0), sheet,
+                      QtCore.QRect(QtCore.QPoint(cur_xcoordUL,cur_ycoordUL),
+                                   QtCore.QPoint(cur_xcoordBR,cur_ycoordBR)))
+                painter.end()
+            except NonAnimationException:
+                # we have a static sprite
+                newsprite = Sprite(width,height,type,self._idct)
+                painter = QtGui.QPainter()
+                painter.begin(newsprite.img)
+                painter.drawPixmap(QtCore.QPoint(0,0), sheet,
+                    QtCore.QRect(QtCore.QPoint(cur_xcoordUL,cur_ycoordUL),
+                                 QtCore.QPoint(cur_xcoordBR,cur_ycoordBR)))
+                painter.end()
+                # record the sprite
+                self[newsprite.sprite_id] = newsprite
+            finally:
+                self._idct = self._idct + 1
+        
+    def PumpAnimation(self, curtime):
+        '''
+        Updates all animations in this spriteset to the correct frame.
+        
+        @type curtime: integer
+        @param curtime: Current engine "tick" (in milliseconds).
+        
+        @note:
+        You should only expect the engine to call this about once every 25ms (f=40Hz).
+        In other words, your sprite-based animations are limited to about 40 frames
+        per second.  You probably won't need to go that high, though.
+        '''
+        for anim in self._animations:
+            anim.PumpAnimation(curtime)
 
-            # record the sprite
-            self[newsprite.sprite_id] = newsprite
-
-
-class NoAnimationException(Exception):
-    """
-    Simple exception that signals that an animation
-    does not exist.
-    """
-    pass
 
 class NoSpriteException(Exception):
     """
@@ -218,226 +407,6 @@ class NoSpriteException(Exception):
     that does not exist is requested.
     """
     pass
-
-#
-# ANIMATIONS
-#
-# Animations are basically ordered lists of sprites, each
-# with a time-to-show value attached in a tuple within the
-# list.  They can be created either on-the-fly (ie. for player
-# animations that vary with the equipped armor) or from the
-# sprites/animations.dat file at startup.
-#
-# Please note that the time-to-show must be a multiple of 100ms.
-# Times are rounded up correctly; if you set a frame to show for
-# 150ms it will be displayed for 200ms.
-#
-# (Yes, you are effectively limited to a maximum of 10 frames
-# per second.)
-#
-
-class AnimationFile(object):
-    """
-    Manages the sprites/animations.dat file, which
-    defines all of the sprite-based animations used
-    by the engine, each as a unique configuration
-    section within the file.
-    """
-
-    def __init__(self, app):
-        # preset some variables
-        self.clientapp = app
-        self.animcache = {}
-
-        # grab a configuration file parser
-        self.parser = ConfigParser.SafeConfigParser(self.GetDefaults())
-        self.parser.read(ClientPaths.GetSpriteFile("animations.dat"))
-
-    def GetAnimation(self, name):
-        """
-        Loads an animation from the file and returns
-        it as an Animation object.
-        """
-        # First of all - have we cached this animation?
-        if name in self.animcache:
-            # Yep, use the cached copy
-            return self.animcache[name]
-
-        # Okay, so it's not in the cache... load it!
-        # Does it even exist in the file?
-        if not self.parser.has_section(name):
-            # Nope, it doesn't exist
-            raise NoAnimationException(name)
-
-        # Okay, it exists - now load it.
-        anim = Animation(self.clientapp, name)
-        opts = self.parser.options(name)
-        for i in range((len(opts)-1) / 3):
-            # About that range() statement there:
-            # So we have 3 options for every frame.
-            # Now, aside from the frames, there is only one
-            # other option, Loop=True|False.  So len(opts)-1
-            # gives us the number of per-frame options, and
-            # dividing by 3 gives us the number of frames.
-            try:
-                # prepare option information
-                timeopt = "time" + str(i)
-                spriteopt = "sprite" + str(i)
-                typeopt = "type" + str(i)
-
-                # get the options
-                time = int(self.parser.get(name, timeopt))
-                type = self.parser.get(name, spriteopt)
-                sprite = int(self.parser.get(name, typeopt))
-                anim.AddSprite(sprite, type, time)
-            except:
-                # invalid frame
-                print "[warning] while loading animation '" + name + "':"
-                print "\tframe " + str(i) + " is invalid."
-        try:
-            anim.SetLoop(self.parser.getboolean(name, "Loop"))
-        except:
-            anim.SetLoop(True)
-        # all done!
-        return anim
-
-    def GetDefaults(self):
-        """
-        Returns a dictionary containing the default values
-        for the animations.dat file.
-        """
-        return {"Loop": True}
-
-class Animation(QtCore.QObject):
-    """
-    A single animation that can be displayed.  An animation
-    is simply a timed sequence of individual sprites; this
-    sequence is stored in the sprites/animations.dat file
-    as an individual configuration file section.
-    """
-
-    def __init__(self, app, name, parent=None):
-        super(Animation,self).__init__(parent)
-        self.clientapp = app
-        self.name = name
-        self.frames = list()
-        self.loop = False
-        self.curframe = 0       # counts current frame displayed
-        self.curtick = 0        # counts number of 100ms intervals passed
-        self.running = False
-
-    def AddSprite(self, spriteid, type, time):
-        """
-        Adds a sprite to the animation sequence for the
-        specified amount of time (in milliseconds).  The
-        time given will be rounded to the nearest tick of
-        the main timer.
-        """
-        # check that the sprite exists
-        if type not in self.clientapp.sprites:
-            # the type doesn't even exist!
-            raise NoSpriteException("'" + type + "' is not a type of sprite")
-        if spriteid >= len(self.clientapp.sprites[type]) or spriteid < 0:
-            # the sprite is out of bounds
-            raise NoSpriteException(type + " sprite " + str(spriteid) \
-                    + " does not exist.")
-        # okay, go ahead and register the sprite in the animation
-        self.frames.append(((time + 50) / 100, \
-                            self.clientapp.sprites[type].GetSprite(spriteid)))
-
-    def DoesLoop(self):
-        """
-        Checks whether or not this animation loops.
-        """
-        return self.loop
-
-    def SetLoop(self, loop):
-        """
-        Sets whether or not this animation loops.
-        """
-        self.loop = loop
-
-    def Play(self):
-        """
-        Starts running the animation.
-        """
-        self.running = True
-
-    def Pause(self):
-        """
-        Pauses the animation, remembering the current frame.
-        """
-        self.running = False
-
-    def Stop(self):
-        """
-        Stops the animation and goes back to the first frame.
-        """
-        self.running = False
-        self.curframe = 0
-
-    def timerEvent(self, event):
-        """
-        Called when the main timer sends us a timer event.
-        """
-        if self.running:
-            # animation is running, so check if we need to animate
-            self.curtick += 1
-            frametime, sprite = self.frames[self.curtick]
-            if self.curtick >= frametime:
-                # advance the frame
-                self._AdvanceFrame()
-
-    def _AdvanceFrame(self):
-        """
-        Called internally to advance to the next frame.
-        """
-        if self.curframe + 1 >= len(self.frames):
-            # does this sprite loop?
-            if self.loop:
-                # yes, go back to frame 0
-                self.curframe = 0
-            else:
-                # no, pause the animation
-                self.Pause()
-        else:
-            # proceed to next frame
-            self.curframe += 1
-        # reset the timing mechanism
-        self.curtick = 0
-
-    def GetCurrentSprite(self):
-        """
-        Returns the sprite of the current frame.
-        Do not trust this to be valid later; this sprite
-        may change over time as the animation proceeds.
-        """
-        frametime, sprite = self.frames[self.curframe]
-        return sprite
-
-class StaticAnimation(Animation):
-    """
-    Wrapper around the animation class for a single-sprite
-    animation.  Also, it doesn't hook itself to the main
-    timer, so it doesn't waste processor time advancing itself.
-    """
-
-    def __init__(self, type, id):
-        self.type = type
-        self.spriteid = id
-        self.AddSprite(100, type, id)
-
-    def GetSpriteType(self):
-        """
-        Gets the type of the sprite.
-        """
-        return self.type
-
-    def GetSpriteId(self):
-        """
-        Gets the ID of the sprite.
-        """
-        return self.spriteid
 
 
 # We now move on to the cross-module support code.
@@ -487,7 +456,8 @@ def _LoadSpriteType(type, fileprefix, basedir=""):
             counter -= 1
             err = "Failed to load spritesheet from '" + filename + "'.\n\n"
             err += "Details:\n" + str(e.args[0])
-            ErrorReporting.ShowError(err, ErrorReporting.ERROR_WARNING)
+            ErrorReporting.ShowError(err, ErrorReporting.ERROR_FATAL)
+            sys.exit()
 
     # Done!
     print "Found", counter, type, "spritesheets."
@@ -498,19 +468,19 @@ def LoadAllSprites(basedir=""):
     """
     Loads all of the sprites for immediate access.
     """
-    global _spritesets
-    _spritesets = {}
+    global spritesets
+    spritesets = {}
 
     print "Loading sprites..."
 
     # load the main sprites
-    _spritesets['tiles'] = _LoadSpriteType("tile","tiles",basedir)
-    _spritesets['items'] = _LoadSpriteType("item","items",basedir)
-    _spritesets['npcs'] = _LoadSpriteType("NPC", "npcs",basedir)
+    spritesets['tiles'] = _LoadSpriteType("tile","tiles",basedir)
+    spritesets['items'] = _LoadSpriteType("item","items",basedir)
+    spritesets['npcs'] = _LoadSpriteType("NPC", "npcs",basedir)
 
     # finally, add an empty "runtime" set for on-the-fly sprites
-    _spritesets['runtime'] = SpriteSet()
-    _spritesets['runtime'].type = "runtime"
+    spritesets['runtime'] = SpriteSet()
+    spritesets['runtime'].type = "runtime"
 
     # announce our success
     print "Sprites loaded."
@@ -525,12 +495,16 @@ def GetSpriteSet(type):
 
     The currently supported types (by default) are C{tiles}, C{items},
     C{npcs}, and C{runtime}.
+    
+    @deprecated: Refactoring has made this unnecessary.  Will be removed
+    at some point.  In the future, directly access the C{spritesets} member
+    of this module.
     """
     # check the type
-    global _spritesets
-    if type not in _spritesets:
+    global spritesets
+    if type not in spritesets:
         # sorry, we don't have that type of sprite
         raise KeyError("Sorry, we don't have that type of sprite!")
 
     # get the spriteset
-    return _spritesets[type]
+    return spritesets[type]

@@ -32,9 +32,10 @@ a future version to provide a simple built-in map tester in which
 the mapper can walk around the map (but without scripts or AIs executing).
 """
 
-from PyQt4 import QtGui
+from PyQt4 import QtCore, QtGui
 import os
 import sys
+import time
 
 # i18n constants
 I18N_DOMAIN = "xVMapEdit"
@@ -44,10 +45,10 @@ if __name__ == "__main__":
     if os.path.exists('sprites'):
         # Client located in the current working directory
         print "Client located in current directory."
-    elif os.path.exists(os.path.join('..','xvClient','sprites')):
+    elif os.path.exists(os.path.join('..','xVClient','sprites')):
         # Client located at ../xVClient/sprites
         print "Client located in ../xVClient."
-        os.chdir(os.path.join('..','xvClient'))
+        os.chdir(os.path.join('..','xVClient'))
     elif os.path.exists(os.path.join('..','client','sprites')):
         # Client located at ../client/sprites
         print "Client located in ../client."
@@ -65,8 +66,10 @@ if __name__ == "__main__":
     import gettext
     gettext.install(I18N_DOMAIN, "locales/")
 
+
 from xVMapEdit import EditorWindow
 from xVClient import Sprite, ErrorReporting
+
 
 class MapEditorApp(object):
     """
@@ -81,8 +84,15 @@ class MapEditorApp(object):
         # initialize some variables
         self.qtapp = None
         """The main Qt application object."""
+        
         self.mainwnd = None
         """Handle to the main window object."""
+        
+        self.animtimer = None
+        '''Timer for controlling animation framerates.'''
+        
+        self.basetime = time.time()
+        '''Unix time that the program was started.'''
 
     def LoadResources(self):
         """
@@ -104,14 +114,41 @@ class MapEditorApp(object):
 
         # load up what we need
         self.LoadResources()
+        
+        # set up the animation-control timer
+        self.animtimer = QtCore.QTimer()
+        self.animtimer.setInterval(25)
+        self.animtimer.setSingleShot(False)
+        self.qtapp.connect(self.animtimer, QtCore.SIGNAL('timeout()'), self.onAnimPulse)
 
         # and here we go! show the main window!
         self.mainwnd = EditorWindow.MainWindow()
         self.mainwnd.show()
+        self.animtimer.start(25)
 
         # let Qt handle the event loop
         retval = self.qtapp.exec_()
         return retval
+    
+    def GetTick(self):
+        '''
+        Gets the number of milliseconds since the editor started running.
+        
+        @return: The number of milliseconds since the editor started running
+        '''
+        return int((time.time() - self.basetime) * 1000)
+    
+    def onAnimPulse(self):
+        '''
+        Invoked by the animation timer every 25 milliseconds.  Pumps the animation frames.
+        '''
+        curtick = self.GetTick()
+        for type, spriteset in Sprite.spritesets.iteritems():
+            spriteset.PumpAnimation(curtick)
+
+
+app = None
+'''Main application object.'''
 
 if __name__ == "__main__":
     # Run the application.

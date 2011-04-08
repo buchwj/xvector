@@ -1,5 +1,5 @@
 # xVector Engine Map Editor
-# Copyright (c) 2010 James Buchwald
+# Copyright (c) 2011 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -192,7 +192,7 @@ class TileChooserView(QtGui.QWidget):
 
                 # draw the tile
                 tile = self.model.spriteset[tile_id]
-                painter.drawPixmap(tile_x,tile_y,tile)
+                painter.drawPixmap(tile_x,tile_y,tile.img)
 
                 # check if we will need to draw the selection border
                 if tile_id == self.model.selected:
