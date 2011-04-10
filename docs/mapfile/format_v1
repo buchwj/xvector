@@ -130,8 +130,7 @@ Table 3, Tile Flags
 
 	bit			flag
 	----		-----
-	0			blocked (players and NPCs cannot pass through tile if set)
-	1..31		unused
+	0..31		unused
 
 Following this is an unsigned integer indicating the number of layers that the
 tile consists of.  Each individual layer is represented by a simple structure;
@@ -146,7 +145,7 @@ Table 4, Layer Flags
 
 	bit			flag
 	----		-----
-	0			animation (sprite ID refers to animation if set)
+	0			blocked (players and NPCs cannot pass through tile if set)
 	1..31		unused
 
 This structure is repeated for as many layers as exist.
@@ -164,11 +163,11 @@ Table 6, Layer Structure
 
 	type		field
 	-----		------
-	s-int		depth (n!=0; 0=NPC+item sprites)
+	s-int		depth
 	u-int		flags
 	u-int		sprite-id (or animation-id if animation flag set)
 
 These tile structures appear in the file one after the other, going by rows.
 In other words, (0,0) is the first tile, then (0,1), then (0,2), then (1,0),
-and so forth.  (Of course, that varies based on your width and height - that's
+and so forth.  (Of course, that varies based on the width and height - that's
 just an example.)

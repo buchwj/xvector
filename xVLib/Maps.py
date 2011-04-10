@@ -22,7 +22,7 @@ Contains classes that represent maps and parts of maps.
 """
 
 import struct
-from xVLib import Heap, General, BinaryStructs
+from xVLib import Heap, BinaryStructs
 
 #
 # MAPS
@@ -42,30 +42,14 @@ from xVLib import Heap, General, BinaryStructs
 
 
 # Some constants related to map files
-CURRENT_MAP_VERSION = 1
+CurrentMapVersion = 1
 """Latest version identifier of the map file format."""
 
-MAP_MAGIC = 0xB0501
-"""\"Magic\" number that appears at the beginning of every map file."""
-
-TILE_WIDTH = 32
+TileWidth = 32
 """Width, in pixels, of a single tile."""
 
-TILE_HEIGHT = 32
+TileHeight = 32
 """Height, in pixels, of a single tile."""
-
-
-# Internal flags used by the tiles
-FLAG_TILE_BLOCKED = 1
-"""XOR flag set at the tile level when a tile is blocked."""
-
-# Internal flags used by the layers
-FLAG_LAYER_ANIMATED = 1
-"""XOR flag set at the layer level when a layer is an animation."""
-
-# Internal flags by the map header
-FLAG_CONTENT_STRIPPED = 1
-"""XOR flag set in the header when the map has been stripped down."""
 
 
 class MapError(Exception): pass
@@ -81,7 +65,7 @@ class Tile(object):
     Represents a single tile in a map.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """
         Creates a new tile with the given layers.  A value of -1 for any layer
         indicates an empty layer.
@@ -89,18 +73,8 @@ class Tile(object):
         @keyword blocked: If C{True}, this tile is impassable.
         """
         # Create empty heaps of layers.
-        self.layers_negative = Heap.Heap()
-        """A heap of the negative layers sorted by their depths."""
-        
-        self.layers_positive = Heap.Heap()
-        """A heap of the positive layers sorted by their depths."""
-
-        # Now check the flags.
-        self.blocked = False
-        """If C{True}, signals that this tile is impassable."""
-        
-        if "blocked" in kwargs:
-            self.blocked = kwargs["blocked"]
+        self.layers = Heap.Heap()
+    
     
     def Serialize(self, fileobj):
         """
@@ -109,10 +83,8 @@ class Tile(object):
         @type fileobj: file
         @param fileobj: An open file object (or compatible stream) for writing
         """
-        # first up, the flags
+        # first up, the flags (we currently have none)
         flags = 0
-        if self.blocked:
-            flags |= FLAG_TILE_BLOCKED
         try:
             BinaryStructs.SerializeUint(fileobj, flags)
         except Exception as e:
@@ -128,20 +100,14 @@ class Tile(object):
         # go through the layers and get them all
         while True:
             try:
-                layer = self.layers_negative.pop()
-            except:
-                # nothing left in the heap
-                break
-            layer.Serialize(fileobj)
-        while True:
-            try:
-                layer = self.layers_positive.pop()
+                # get the lowest remaining layer
+                layer = self.layers.pop()
             except:
                 # nothing left in the heap
                 break
             layer.Serialize(fileobj)
     
-    def Deserialize(self, fileobj, formatver=CURRENT_MAP_VERSION):
+    def Deserialize(self, fileobj, formatver=CurrentMapVersion):
         """
         Reads in a tile from a file using the appropriate mapfile version.
         
@@ -156,10 +122,10 @@ class Tile(object):
         in from a file in a single line of code.
         """
         # do we support this version?
-        if formatver == CURRENT_MAP_VERSION:
+        if formatver == CurrentMapVersion:
             # current version... let's go!
             self._Deserialize_CurrentVer(fileobj)
-        elif formatver > CURRENT_MAP_VERSION:
+        elif formatver > CurrentMapVersion:
             # unsupported future version
             msg = "Unsupported future version of the map file format. "
             msg += "Check if a newer version of the program is available."
@@ -178,7 +144,7 @@ class Tile(object):
             flags = BinaryStructs.DeserializeUint(fileobj)
         except:
             raise MapError("invalid/corrupt map file")
-        self.blocked = bool(flags & FLAG_TILE_BLOCKED)
+        # Of course, we don't have any flags to handle, so... yeah.
         
         # next up, the layers
         try:
@@ -190,20 +156,17 @@ class Tile(object):
                 layer = Layer().Deserialize(fileobj)
             except:
                 raise MapError("invalid/corrupt map file")
-            if layer.depth < 0:
-                self.layers_negative.push(layer)
-            elif layer.depth > 0:
-                self.layers_positive.push(layer)
-            else:
-                raise MapError("zero-depth layer encountered")
+            self.layers.push(layer)
 
 
 class Layer(object):
     """
     A single graphical layer of a tile.  These are stored in the tile as an
-    ordered set which can be iterated over; a lower value is drawn earlier,
-    sprites and items are drawn at 0, and a higher value is drawn later.
+    ordered set which can be iterated over; a lower value is drawn earlier.
     """
+    
+    Flag_Blocked = 1
+    '''Layer flag set when a layer is blocked/impassable.'''
 
     def __init__(self, depth=-1, id=0, **kwargs):
         """
@@ -219,25 +182,20 @@ class Layer(object):
         than a sprite
         """
         # set up some variables
-        if depth == 0:
-            raise MapError("0 is an invalid layer position")
-
         self.depth = depth
         """Z position of the layer.  A greater value is higher."""
 
-        self.content_id = id
+        self.tile_id = id
         """
-        ID of whatever this layer corresponds to.  What this layer corresponds
-        to is determined by the various flags that are set on the sprite
-        (eg. animated).
+        ID of the tile drawn for this layer.
         """
 
-        self.animated = False
-        """Whether this layer is an animated layer."""
+        self.blocked = False
+        '''True if this layer is blocked/impassable.'''
 
         # check the flags
-        if "animated" in kwargs:
-            self.animated = kwargs["animated"]
+        if "blocked" in kwargs:
+            self.blocked = kwargs["blocked"]
     
     def __cmp__(self, other):
         """
@@ -269,20 +227,20 @@ class Layer(object):
         
         # next, the flags
         flags = 0
-        if self.animated:
-            flags |= FLAG_LAYER_ANIMATED
+        if self.blocked:
+            flags |= self.Flag_Blocked
         try:
             BinaryStructs.SerializeUint(fileobj, flags)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
-        # finally, the content
+        # finally, the tile
         try:
-            BinaryStructs.SerializeUint(fileobj, self.content_id)
+            BinaryStructs.SerializeUint(fileobj, self.tile_id)
         except Exception as e:
             raise IOError("error while writing to map file", e)
     
-    def Deserialize(self, fileobj, formatver=CURRENT_MAP_VERSION):
+    def Deserialize(self, fileobj, formatver=CurrentMapVersion):
         """
         Reads in this layer from a file using the given mapfile format version.
         
@@ -297,7 +255,7 @@ class Layer(object):
         in from a file in a single line of code.
         """
         # check the map file version
-        if formatver == CURRENT_MAP_VERSION:
+        if formatver == CurrentMapVersion:
             # latest version... let's go!
             self._Deserialize_CurrentVer(fileobj)
         else:
@@ -324,27 +282,14 @@ class Layer(object):
             flags = BinaryStructs.DeserializeUint(fileobj)
         except:
             raise MapError("invalid/corrupt map file")
-        self.animated = bool(flags & FLAG_LAYER_ANIMATED)
+        self.blocked = bool(flags & self.Flag_Blocked)
         
         # finally, read the content
         try:
-            self.content_id = BinaryStructs.DeserializeUint(fileobj)
+            self.tile_id = BinaryStructs.DeserializeUint(fileobj)
         except:
             raise MapError("invalid/corrupt map file")
 
-
-# And here we have some lovely structures for the map file format!
-STRUCT_MHEADER = struct.Struct('<II')
-"""
-Primary header of the map file.
-
-THIS DOES NOT CHANGE WITH VERSION.  DO NOT MODIFY.
- * I, 0 - Magic number (constant, 0xB0501)
- * I, 1 - Map Format Version ID
-"""
-
-SZ_MHEADER = STRUCT_MHEADER.size
-"""Size in bytes of the primary header of the map file."""
 
 class BaseMap(object):
     """
@@ -352,6 +297,18 @@ class BaseMap(object):
     some assorted header info.  This is essentially a client-side map in that 
     it contains none of the server-specific data.
     """
+
+    MetaheaderStruct = struct.Struct('<II')
+    """
+    Primary header of the map file.
+    
+    THIS DOES NOT CHANGE WITH VERSION.  DO NOT MODIFY.
+     * I, 0 - Magic number (constant, 0xB0501)
+     * I, 1 - Map Format Version ID
+    """
+    
+    MagicNumber = 0xB0501
+    '''"Magic" number that appears at the beginning of every map file.'''
 
     def __init__(self, width=1, height=1):
         """
@@ -386,11 +343,11 @@ class BaseMap(object):
         
         # prep the tiles
         for x in range(width):
-            self.tiles[x] = []
+            self.tiles.append([])
             for y in range(height):
-                self.tiles[x][y] = Tile()
+                self.tiles[x].append(Tile())
 
-        self.version = CURRENT_MAP_VERSION
+        self.version = CurrentMapVersion
         """
         The mapfile format version this was loaded from.
 
@@ -497,14 +454,14 @@ class BaseMap(object):
         @type fileobj: file
         @param fileobj: an open file object that contains the map
         """
-        buf = fileobj.read(SZ_MHEADER)
-        magic, formatver = STRUCT_MHEADER.unpack(buf)
-        if magic != MAP_MAGIC:
+        buf = fileobj.read(self.MetaheaderStruct.size)
+        magic, formatver = self.MetaheaderStruct.unpack(buf)
+        if magic != self.MagicNumber:
             # not a valid map file
             raise MapError("map " + file.name + " is not valid (magic).")
 
         # load the rest by the correct version
-        if formatver == CURRENT_MAP_VERSION:
+        if formatver == CurrentMapVersion:
             self._Load_CurrentVer(fileobj, formatver)
         else:
             # unrecognized future format
@@ -512,7 +469,7 @@ class BaseMap(object):
             msg += "Check if a newer version of the program is available."
             raise FutureFormatException(msg)
     
-    def _Load_CurrentVer(self, fileobj, formatver=CURRENT_MAP_VERSION):
+    def _Load_CurrentVer(self, fileobj, formatver=CurrentMapVersion):
         """
         Loads the latest format of the map file from the specified
         file object.
@@ -558,7 +515,7 @@ class BaseMap(object):
         """
         # write the meta-header
         try:
-            mheader = STRUCT_MHEADER.pack(MAP_MAGIC, CURRENT_MAP_VERSION)
+            mheader = self.MetaheaderStruct.pack(self.MagicNumber, CurrentMapVersion)
             fileobj.write(mheader)
         except Exception as e:
             raise IOError("error while writing map file", e)
@@ -622,6 +579,9 @@ class MapHeader(object):
     The main header of a map file.
     """
     
+    Flag_ContentStripped = 1
+    """XOR flag set in the header when the map has been stripped down."""
+    
     def __init__(self):
         """
         Creates a new header with default values.
@@ -678,13 +638,13 @@ class MapHeader(object):
         try:
             contentFlags = 0
             if self.stripped:
-                contentFlags = contentFlags or FLAG_CONTENT_STRIPPED
+                contentFlags = contentFlags | self.Flag_ContentStripped
             tmpstr = BinaryStructs.UintStruct.pack(contentFlags)
             fileobj.write(tmpstr)
         except Exception as e:
             raise IOError("error while writing to map file", e)
     
-    def Deserialize(self, fileobj, formatver=CURRENT_MAP_VERSION):
+    def Deserialize(self, fileobj, formatver=CurrentMapVersion):
         """
         Reads and decodes the header from a stream (usually a file).
         
@@ -695,7 +655,7 @@ class MapHeader(object):
         @param formatver: version of the map file format to process
         """
         # which version are we reading from?
-        if formatver == CURRENT_MAP_VERSION:
+        if formatver == CurrentMapVersion:
             # latest version of the header format!
             # again, we're just reading everything in the right order
             # first up is the basic file information
@@ -718,14 +678,14 @@ class MapHeader(object):
             
             # and then we read in the content flags...
             contentflags = BinaryStructs.DeserializeUint(fileobj)
-            self.stripped = contentflags & FLAG_CONTENT_STRIPPED
+            self.stripped = contentflags & self.Flag_ContentStripped
             
         else:
             # unrecognized future version
             raise FutureFormatException("unrecognized format version")
 
 
-class FullMap(BaseMap):
+class Map(BaseMap):
     """
     The most complete form of the map file.
 
@@ -734,4 +694,4 @@ class FullMap(BaseMap):
     way we can control how much the client knows.  The more the client knows,
     the easier it is for a hacker to take advantage of the system.
     """
-    pass        # for now, there's nothing special about the FullMap
+    pass        # for now, there's nothing special about the Map

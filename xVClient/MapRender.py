@@ -56,10 +56,10 @@ def GetTileTL(x, y):
         raise IndexError("(x,y) coordinate pair out of bounds")
 
     # Calculate the top-left coordinates
-    column = x // Maps.TILE_WIDTH
-    row = y // Maps.TILE_HEIGHT
-    tlx = column * Maps.TILE_WIDTH
-    tly = row * Maps.TILE_HEIGHT
+    column = x // Maps.TileWidth
+    row = y // Maps.TileHeight
+    tlx = column * Maps.TileWidth
+    tly = row * Maps.TileHeight
     return (tlx, tly)
 
 
@@ -85,7 +85,7 @@ def GetTileTR(x, y):
 
     # Calculate the bottom-right coordinates
     tlx, tly = GetTileTL(x,y)
-    trx = tlx + Maps.TILE_WIDTH - 1
+    trx = tlx + Maps.TileWidth - 1
     return (trx,tly)
 
 
@@ -111,7 +111,7 @@ def GetTileBL(x, y):
 
     # Calculate the bottom-right coordinates
     tlx, tly = GetTileTL(x,y)
-    bly = tly + Maps.TILE_HEIGHT - 1
+    bly = tly + Maps.TileHeight - 1
     return (tlx,bly)
 
 
@@ -137,8 +137,8 @@ def GetTileBR(x, y):
 
     # Calculate the bottom-right coordinates
     tlx, tly = GetTileTL(x,y)
-    brx = tlx + Maps.TILE_WIDTH - 1
-    bry = tly + Maps.TILE_HEIGHT - 1
+    brx = tlx + Maps.TileWidth - 1
+    bry = tly + Maps.TileHeight - 1
     return (brx,bry)
 
 
@@ -185,8 +185,8 @@ class MapRenderer(object):
         @return: the X and Y major coordinates of the tile
         @rtype: tuple
         """
-        major_x = minor_x // Maps.TILE_WIDTH
-        major_y = minor_y // Maps.TILE_HEIGHT
+        major_x = minor_x // Maps.TileWidth
+        major_y = minor_y // Maps.TileHeight
         return (major_x, major_y)
 
     def RenderNegative(self, painter, src_rect=None, dst_rect=None):
@@ -231,8 +231,8 @@ class MapRenderer(object):
         if src_rect == None:
             # create a default rect that covers the full map
             source = QtCore.QRect(0,0,0,0)
-            source.setWidth(self.map.width * Maps.TILE_WIDTH)
-            source.setHeight(self.map.height * Maps.TILE_HEIGHT)
+            source.setWidth(self.map.width * Maps.TileWidth)
+            source.setHeight(self.map.height * Maps.TileHeight)
         else:
             # a rect was passed in
             source = src_rect
@@ -241,8 +241,8 @@ class MapRenderer(object):
         if dst_rect == None:
             # create a default rect of the maximum possible size
             dest = QtCore.QRect(0,0,0,0)
-            idealWidth = self.map.width * Maps.TILE_WIDTH
-            idealHeight = self.map.height * Maps.TILE_HEIGHT
+            idealWidth = self.map.width * Maps.TileWidth
+            idealHeight = self.map.height * Maps.TileHeight
             if idealWidth > painter.width():
                 dest.setWidth(painter.width())
             else:
@@ -269,10 +269,10 @@ class MapRenderer(object):
             for MajY in range(ul_ty, br_ty):
                 # find the actual target region
                 naive_target = QtCore.QRect(0,0,0,0)
-                naive_target.setX(MajX * Maps.TILE_WIDTH)
-                naive_target.setY(MajY * Maps.TILE_HEIGHT)
-                naive_target.setWidth(Maps.TILE_WIDTH)
-                naive_target.setHeight(Maps.TILE_HEIGHT)
+                naive_target.setX(MajX * Maps.TileWidth)
+                naive_target.setY(MajY * Maps.TileHeight)
+                naive_target.setWidth(Maps.TileWidth)
+                naive_target.setHeight(Maps.TileHeight)
                 
                 real_target = naive_target.intersected(dest)
                 if real_target.isNull():

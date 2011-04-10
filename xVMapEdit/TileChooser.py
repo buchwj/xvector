@@ -121,8 +121,8 @@ class TileChooserView(QtGui.QWidget):
         """
         Finds the ID number of a tile given its top-left coordinates.
         """
-        column = x // Maps.TILE_WIDTH
-        row = y // Maps.TILE_HEIGHT
+        column = x // Maps.TileWidth
+        row = y // Maps.TileHeight
         id = (row * self.ChooserWidth) + column
         return id
 
@@ -140,8 +140,8 @@ class TileChooserView(QtGui.QWidget):
         # calculate
         row = id // self.ChooserWidth
         col = id % self.ChooserWidth
-        tlx = Maps.TILE_WIDTH * col
-        tly = Maps.TILE_HEIGHT * row
+        tlx = Maps.TileWidth * col
+        tly = Maps.TileHeight * row
         return tlx,tly
 
     def paintEvent(self, event):
@@ -173,16 +173,16 @@ class TileChooserView(QtGui.QWidget):
         tlx, tly = MapRender.GetTileTL(rect_tlx,rect_tly)
         trx, tRy = MapRender.GetTileTR(rect_tlx + w - 1, rect_tly)
         brx, bry = MapRender.GetTileBR(rect_tlx + w - 1, rect_tly + h - 1)
-        tiles_wide = (trx - tlx) // Maps.TILE_WIDTH + 1
-        tiles_high = (bry - tly) // Maps.TILE_HEIGHT + 1
+        tiles_wide = (trx - tlx) // Maps.TileWidth + 1
+        tiles_high = (bry - tly) // Maps.TileHeight + 1
         
         # Draw the tiles (oh yay, a nested loop)
         must_draw_selection = False
         for tile_across in range(tiles_wide):
             for tile_down in range(tiles_high):
                 # figure out what's going on
-                tile_x = tlx + (tile_across * Maps.TILE_WIDTH)
-                tile_y = tly + (tile_down * Maps.TILE_HEIGHT)
+                tile_x = tlx + (tile_across * Maps.TileWidth)
+                tile_y = tly + (tile_down * Maps.TileHeight)
                 tile_id = self._GetTileID(tile_x, tile_y)
 
                 # check if that tile exists
@@ -211,8 +211,8 @@ class TileChooserView(QtGui.QWidget):
             target = QtCore.QRect()
             target.setX(tile_x)
             target.setY(tile_y)
-            target.setWidth(Maps.TILE_WIDTH)
-            target.setHeight(Maps.TILE_HEIGHT)
+            target.setWidth(Maps.TileWidth)
+            target.setHeight(Maps.TileHeight)
             painter.drawRect(target)
             painter.restore()
 
@@ -226,8 +226,8 @@ class TileChooserView(QtGui.QWidget):
         This value is used by Qt 4 to manage the widget when it
         is added to its parent scrollbox.
         """
-        width = Maps.TILE_WIDTH * self.ChooserWidth
-        height = Maps.TILE_HEIGHT * (len(self.model) // self.ChooserWidth + 1)
+        width = Maps.TileWidth * self.ChooserWidth
+        height = Maps.TileHeight * (len(self.model) // self.ChooserWidth + 1)
         return QtCore.QSize(width,height)
 
     def mousePressEvent(self, event):
@@ -250,8 +250,8 @@ class TileChooserView(QtGui.QWidget):
             prev_target = QtCore.QRect()
             prev_target.setX(prev_tlx - self.SelectorWidth)
             prev_target.setY(prev_tly - self.SelectorWidth)
-            prev_target.setWidth(Maps.TILE_WIDTH + 2 * self.SelectorWidth)
-            prev_target.setHeight(Maps.TILE_HEIGHT + 2 * self.SelectorWidth)
+            prev_target.setWidth(Maps.TileWidth + 2 * self.SelectorWidth)
+            prev_target.setHeight(Maps.TileHeight + 2 * self.SelectorWidth)
             self.repaint(prev_target)
 
         # figure out what was clicked
@@ -268,6 +268,6 @@ class TileChooserView(QtGui.QWidget):
         target = QtCore.QRect()
         target.setX(tlx - self.SelectorWidth)
         target.setY(tly - self.SelectorWidth)
-        target.setWidth(Maps.TILE_WIDTH + 2 * self.SelectorWidth)
-        target.setHeight(Maps.TILE_HEIGHT + 2 * self.SelectorWidth)
+        target.setWidth(Maps.TileWidth + 2 * self.SelectorWidth)
+        target.setHeight(Maps.TileHeight + 2 * self.SelectorWidth)
         self.repaint(target)

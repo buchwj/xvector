@@ -19,42 +19,51 @@
 Contains code for nicely reporting errors to the user.
 """
 
+import traceback
 from PyQt4 import QtGui
 
 
 # Severity constants
-ERROR_FATAL = 1
+FatalError = 1
 """Fatal error, forces termination of application."""
 
-ERROR_NORMAL = 2
+NormalError = 2
 """Normal error, this has impact but does not crash the program."""
 
-ERROR_WARNING = 3
+WarningError = 3
 """Warning, this does not affect function but should cause concern."""
 
-ERROR_NOTICE = 4
+NoticeError = 4
 """General information."""
 
 
-def ShowError(message, severity=ERROR_NORMAL, parent=None):
+def ShowError(message, severity=NormalError, parent=None):
     """
     Displays an error message to the user and waits for a response.
     """
     dlg = QtGui.QMessageBox(parent)
     dlg.setText(message)
-    if severity == ERROR_FATAL:
+    if severity == FatalError:
         dlg.setIcon(QtGui.QMessageBox.Critical)
         dlg.setWindowTitle("Fatal Error")
-    elif severity == ERROR_NORMAL:
+    elif severity == NormalError:
         dlg.setIcon(QtGui.QMessageBox.Critical)
         dlg.setWindowTitle("Error")
-    elif severity == ERROR_WARNING:
+    elif severity == WarningError:
         dlg.setIcon(QtGui.QMessageBox.Warning)
         dlg.setWindowTitle("Warning")
-    elif severity == ERROR_NOTICE:
+    elif severity == NoticeError:
         dlg.setIcon(QtGui.QMessageBox.Information)
         dlg.setWindowTitle("Notice")
     else:
         dlg.setIcon(QtGui.QMessageBox.NoIcon)
         dlg.setWindowTitle("Message")
     dlg.exec_()
+
+
+def ShowException(severity=NormalError, start_msg='An error has occurred!', parent=None):
+    '''
+    Displays the currently-handled exception in an error box.
+    '''
+    msg = start_msg + "\n\n" + traceback.format_exc()
+    ShowError(msg, severity, parent)
