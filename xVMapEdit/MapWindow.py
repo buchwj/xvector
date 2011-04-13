@@ -101,6 +101,7 @@ class NewMapDialog(QtGui.QDialog):
         widget = EditorWidget(parent=self.parent().ui.mdiArea, map=NewMap)
         wnd = self.parent().ui.mdiArea.addSubWindow(widget)
         wnd.setWindowTitle(name)
+        self.parent().ui.mdiArea.setActiveSubWindow(wnd)
     
     def OnCancel(self):
         """
@@ -116,24 +117,53 @@ class LayerSelector(QtGui.QWidget):
     This appears at the top of every EditorWidget.
     '''
     
-    def __init__(self, value=1):
+    def __init__(self, parent=None, value=1):
         '''
         Creates a new layer selector widget.
         
         @type value: integer
         @param value: Initial layer to set the slider to
         '''
+        # initialize the widget
+        super(LayerSelector,self).__init__(parent)
+        
         # create the layout
         self.Layout = QtGui.QHBoxLayout()
+        self.Layout.setSpacing(0)
+        self.Layout.setMargin(0)
         self.setLayout(self.Layout)
         
-        # create the controls
-        self.lblCaption = QtGui.QLabel("Layer: ", parent=self)
-        self.Layout.addWidget(self.lblCaption)
+        # add a dummy stretcher
+        self.Layout.addStretch(1)
         
-        self.spnLayer = QtGui.QSlider(parent=self)
+        # create our size policy
+        self.SizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+                                            QtGui.QSizePolicy.Fixed)
+        
+        # create our widgets
+        self.lblCaption = QtGui.QLabel("Layer: ", parent=self)
+        self.lblCaption.setSizePolicy(self.SizePolicy)
+        self.Layout.addWidget(self.lblCaption)
+        self.Layout.setAlignment(self.lblCaption, QtCore.Qt.AlignRight)
+        
+        self.spnLayer = QtGui.QSpinBox(parent=self)
+        self.spnLayer.setMinimum(-9000)
+        self.spnLayer.setMaximum(9000)
         self.spnLayer.setValue(value)
+        self.spnLayer.setSizePolicy(self.SizePolicy)
         self.Layout.addWidget(self.spnLayer)
+        self.Layout.setAlignment(self.spnLayer, QtCore.Qt.AlignRight)
+    
+    @property
+    def layer(self):
+        '''
+        Property definition for getting and setting the current layer.
+        '''
+        return self.spnLayer.value()
+    
+    @layer.setter
+    def layer(self, newlayer):
+        self.spnLayer.setValue(newlayer)
 
 
 class EditorWidget(QtGui.QWidget):
@@ -157,20 +187,23 @@ class EditorWidget(QtGui.QWidget):
 
         # create the layout
         self.Layout = QtGui.QVBoxLayout()
+        self.Layout.setSpacing(0)
+        self.Layout.setMargin(0)
         self.setLayout(self.Layout)
         
-        # crea
+        # create the layer selector and add it
+        self.LayerSel = LayerSelector(parent=self, value=1)
+        '''The layer selector widget.'''
+        self.Layout.addWidget(self.LayerSel)
 
         # create the scroll area and add it
         self.ScrollArea = QtGui.QScrollArea(parent=self)
         """The scroll area that contains the MapWidget."""
-        
         self.Layout.addWidget(self.ScrollArea)
         
         # create the status bar and add it
         self.StatusBar = QtGui.QStatusBar(parent=self)
         """The status bar of the window."""
-        
         self.Layout.addWidget(self.StatusBar)
         
         self.CoordinateLabel = QtGui.QLabel(parent=self.StatusBar)
@@ -182,15 +215,12 @@ class EditorWidget(QtGui.QWidget):
         # create our map widget and add it
         self.MapWidget = MapWidget(parent=self.ScrollArea, map=map)
         self.ScrollArea.setWidget(self.MapWidget)
-    
-    def closeEvent(self, event):
-        '''
-        Called when the window closes.
         
-        @type event: C{QtCore.QCloseEvent}
-        @param event: Close event passed by Qt
-        '''
+        # fix the tab order
+        self.setTabOrder(self.ScrollArea, self.LayerSel)
         
+        # add a random stretcher
+        self.Layout.addStretch(1)
 
 
 class MapWidget(QtGui.QWidget):
