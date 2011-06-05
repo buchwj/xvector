@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MapEditorAbout.ui'
 #
-# Created: Fri Apr  8 16:40:08 2011
+# Created: Wed Apr 20 19:59:56 2011
 #      by: PyQt4 UI code generator 4.7.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -14,7 +14,7 @@ class Ui_MapEditorAboutDlg(object):
         MapEditorAboutDlg.setObjectName("MapEditorAboutDlg")
         MapEditorAboutDlg.setWindowModality(QtCore.Qt.ApplicationModal)
         MapEditorAboutDlg.resize(332, 219)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MapEditorAboutDlg.sizePolicy().hasHeightForWidth())
@@ -22,25 +22,25 @@ class Ui_MapEditorAboutDlg(object):
         MapEditorAboutDlg.setMinimumSize(QtCore.QSize(0, 0))
         MapEditorAboutDlg.setMaximumSize(QtCore.QSize(100000, 100000))
         MapEditorAboutDlg.setModal(True)
-        self.widget = QtGui.QWidget(MapEditorAboutDlg)
-        self.widget.setGeometry(QtCore.QRect(10, 10, 313, 198))
-        self.widget.setObjectName("widget")
-        self.gridLayout_2 = QtGui.QGridLayout(self.widget)
+        self.layoutWidget = QtGui.QWidget(MapEditorAboutDlg)
+        self.layoutWidget.setGeometry(QtCore.QRect(10, 10, 313, 198))
+        self.layoutWidget.setObjectName("layoutWidget")
+        self.gridLayout_2 = QtGui.QGridLayout(self.layoutWidget)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.label = QtGui.QLabel(self.widget)
+        self.label = QtGui.QLabel(self.layoutWidget)
         self.label.setTextFormat(QtCore.Qt.AutoText)
         self.label.setObjectName("label")
         self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-        self.label_2 = QtGui.QLabel(self.widget)
+        self.label_2 = QtGui.QLabel(self.layoutWidget)
         self.label_2.setObjectName("label_2")
         self.gridLayout_2.addWidget(self.label_2, 1, 0, 1, 2)
-        self.label_3 = QtGui.QLabel(self.widget)
+        self.label_3 = QtGui.QLabel(self.layoutWidget)
         self.label_3.setObjectName("label_3")
         self.gridLayout_2.addWidget(self.label_3, 2, 0, 1, 2)
-        self.btnAboutQt = QtGui.QPushButton(self.widget)
+        self.btnAboutQt = QtGui.QPushButton(self.layoutWidget)
         self.btnAboutQt.setObjectName("btnAboutQt")
         self.gridLayout_2.addWidget(self.btnAboutQt, 3, 1, 1, 1)
-        self.buttonBox = QtGui.QDialogButtonBox(self.widget)
+        self.buttonBox = QtGui.QDialogButtonBox(self.layoutWidget)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(True)

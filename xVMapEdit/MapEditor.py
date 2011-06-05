@@ -102,7 +102,7 @@ class MapEditorApp(object):
         try:
             Sprite.LoadAllSprites()
         except Sprite.SpriteLoadFailure as e:
-            ErrorReporting.ShowError(e.args[0], ErrorReporting.ERROR_FATAL)
+            ErrorReporting.ShowError(e.args[0], ErrorReporting.FatalError)
             sys.exit(0)
 
     def Main(self):

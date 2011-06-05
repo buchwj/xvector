@@ -59,11 +59,20 @@ class MapError(Exception): pass
 class FutureFormatException(MapError): pass
 """Raised when a map with an unsupported future map format is loaded."""
 
+class EndOfSectionException(Exception): pass
+'''Raised when the end of a section is reached in the map file.'''
+
 
 class Tile(object):
     """
     Represents a single tile in a map.
     """
+    
+    # Tile flags.
+    BlockedFlag = 1
+    '''Flag which signals that a tile is blocked.'''
+    EndOfTilesFlag = 1073741824
+    '''Flag which signals that there are no more tiles in the map file.'''
 
     def __init__(self):
         """
@@ -72,8 +81,17 @@ class Tile(object):
         
         @keyword blocked: If C{True}, this tile is impassable.
         """
-        # Create empty heaps of layers.
-        self.layers = Heap.Heap()
+        # Set default values
+        self.x = 0
+        '''X-coordinate of tile'''
+        self.y = 0
+        '''Y-coordinate of tile'''
+        self.z = 0
+        '''Depth (layer) of tile'''
+        self.blocked = False
+        '''If true, tile is impassible.'''
+        self.tileid = 0
+        '''ID of the tile sprite to draw.'''
     
     
     def Serialize(self, fileobj):
@@ -83,29 +101,28 @@ class Tile(object):
         @type fileobj: file
         @param fileobj: An open file object (or compatible stream) for writing
         """
-        # first up, the flags (we currently have none)
+        # pack all of the flags
         flags = 0
+        if self.blocked:
+            flags |= self.BlockedFlag
         try:
             BinaryStructs.SerializeUint(fileobj, flags)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
-        # now the layer count
-        layercount = len(self.layers_negative) + len(self.layers_positive)
+        # write the coordinates
         try:
-            BinaryStructs.SerializeUint(fileobj, layercount)
+            BinaryStructs.SerializeUint(fileobj, self.x)
+            BinaryStructs.SerializeUint(fileobj, self.y)
+            BinaryStructs.SerializeUint(fileobj, self.z)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
-        # go through the layers and get them all
-        while True:
-            try:
-                # get the lowest remaining layer
-                layer = self.layers.pop()
-            except:
-                # nothing left in the heap
-                break
-            layer.Serialize(fileobj)
+        # write the tile information
+        try:
+            BinaryStructs.SerializeUint(fileobj, self.tileid)
+        except Exception as e:
+            raise IOError("error while writing to map file", e)
     
     def Deserialize(self, fileobj, formatver=CurrentMapVersion):
         """
@@ -142,154 +159,28 @@ class Tile(object):
         # first: the flags
         try:
             flags = BinaryStructs.DeserializeUint(fileobj)
-        except:
-            raise MapError("invalid/corrupt map file")
-        # Of course, we don't have any flags to handle, so... yeah.
-        
-        # next up, the layers
-        try:
-            numlayers = BinaryStructs.DeserializeUint(fileobj)
-        except:
-            raise MapError("invalid/corrupt map file")
-        for i in range(numlayers):
-            try:
-                layer = Layer().Deserialize(fileobj)
-            except:
-                raise MapError("invalid/corrupt map file")
-            self.layers.push(layer)
-
-
-class Layer(object):
-    """
-    A single graphical layer of a tile.  These are stored in the tile as an
-    ordered set which can be iterated over; a lower value is drawn earlier.
-    """
-    
-    Flag_Blocked = 1
-    '''Layer flag set when a layer is blocked/impassable.'''
-
-    def __init__(self, depth=-1, id=0, **kwargs):
-        """
-        Creates a layer and optionally sets the properties.
-
-        @type depth: integer
-        @param depth: Z position of the layer (less is lower)
-
-        @type id: integer
-        @param id: ID number of the content (eg. sprite id, etc.)
-
-        @keyword animated: If C{True}, this layer contains an animation rather
-        than a sprite
-        """
-        # set up some variables
-        self.depth = depth
-        """Z position of the layer.  A greater value is higher."""
-
-        self.tile_id = id
-        """
-        ID of the tile drawn for this layer.
-        """
-
-        self.blocked = False
-        '''True if this layer is blocked/impassable.'''
-
-        # check the flags
-        if "blocked" in kwargs:
-            self.blocked = kwargs["blocked"]
-    
-    def __cmp__(self, other):
-        """
-        Compares this layer's depth to another value.
-        """
-        if hasattr(other, "depth"):
-            # Other comparison object has depth, compare that
-            if self.depth < other.depth: return -1
-            elif self.depth == other.depth: return 0
-            else: return 1
-        else:
-            # Other object does not have depth, fall back on __cmp__
-            if self.depth < other: return -1
-            elif self.depth == other: return 0
-            else: return 1
-    
-    def Serialize(self, fileobj):
-        """
-        Outputs this layer to a file using the latest mapfile format version.
-        
-        @type fileobj: file
-        @param fileobj: A file object with write capability to output the layer to
-        """
-        # first, the depth
-        try:
-            BinaryStructs.SerializeUint(fileobj, self.depth)
         except Exception as e:
-            raise IOError("error while writing to map file", e)
+            raise MapError("invalid/corrupt map file", e)
+        # Check for the end-of-tiles flag.
+        if flags & self.EndOfTilesFlag:
+            # End of tiles.
+            raise EndOfSectionException()
         
-        # next, the flags
-        flags = 0
-        if self.blocked:
-            flags |= self.Flag_Blocked
+        # And now the normal flags...
+        self.blocked = bool(flags & self.BlockedFlag)
+        
+        # Read in the rest of the title data.
+        # Validation should happen in the map deserialization (since it has
+        # access to the map header for dimensional validation).  Just store
+        # the values for now.
         try:
-            BinaryStructs.SerializeUint(fileobj, flags)
+            self.x = BinaryStructs.DeserializeUint(fileobj)
+            self.y = BinaryStructs.DeserializeUint(fileobj)
+            self.z = BinaryStructs.DeserializeUint(fileobj)
+            self.tileid = BinaryStructs.DeserializeUint(fileobj)
         except Exception as e:
-            raise IOError("error while writing to map file", e)
-        
-        # finally, the tile
-        try:
-            BinaryStructs.SerializeUint(fileobj, self.tile_id)
-        except Exception as e:
-            raise IOError("error while writing to map file", e)
-    
-    def Deserialize(self, fileobj, formatver=CurrentMapVersion):
-        """
-        Reads in this layer from a file using the given mapfile format version.
-        
-        @type fileobj: file
-        @param fileobj: An open file object to read the layer from.
-        
-        @type formatver: integer
-        @param formatver: Map file format version to parse the file as
-        
-        @return: A handle to this object.  This allows you to make calls
-        such as C{Layer().Deserialize(...)} to create an object and read it
-        in from a file in a single line of code.
-        """
-        # check the map file version
-        if formatver == CurrentMapVersion:
-            # latest version... let's go!
-            self._Deserialize_CurrentVer(fileobj)
-        else:
-            # unsupported future version
-            msg = "Unsupported future version of the map file format. "
-            msg += "Check if a newer version of the program is available."
-            raise FutureFormatException(msg)
-
-    def _Deserialize_CurrentVer(self, fileobj):
-        """
-        Reads a layer from the file using the current map file format.
-        
-        @type fileobj: C{file} or compatible stream
-        @param fileobj: File to read the layer from.
-        """
-        # first up, read the depth
-        try:
-            self.depth = BinaryStructs.DeserializeUint(fileobj)
-        except:
-            raise MapError("invalid/corrupt map file")
-        
-        # next, read the flags
-        try:
-            flags = BinaryStructs.DeserializeUint(fileobj)
-        except:
-            raise MapError("invalid/corrupt map file")
-        self.blocked = bool(flags & self.Flag_Blocked)
-        
-        # finally, read the content
-        try:
-            self.tile_id = BinaryStructs.DeserializeUint(fileobj)
-        except:
-            raise MapError("invalid/corrupt map file")
-
+            raise MapError("invalid/corrupt map file", e)
+            
 
 class BaseMap(object):
     """
@@ -310,7 +201,7 @@ class BaseMap(object):
     MagicNumber = 0xB0501
     '''"Magic" number that appears at the beginning of every map file.'''
 
-    def __init__(self, width=1, height=1):
+    def __init__(self, width=1, height=1, depth=1):
         """
         Creates an empty map with the given dimensions.
         
@@ -331,21 +222,13 @@ class BaseMap(object):
         self.header.height = height
 
         self.tiles = []
-        """
-        The collection of tile objects that forms the map.
-
-        The structure of this collection is a dict which maps integer
-        keys (the x-coordinates of the tiles) to another dict.  This
-        second dict maps integer keys (the y-coordinates of the tiles)
-        to the actual tile objects.  This allows individual tiles
-        to be referred to by their coordinates as C{tiles[x][y]}.
-        """
+        '''
+        The collection of tiles that constitutes this map.
         
-        # prep the tiles
-        for x in range(width):
-            self.tiles.append([])
-            for y in range(height):
-                self.tiles[x].append(Tile())
+        This is essentially a three-dimensional matrix addressed by
+        C{tiles[z][x][y]}.  The unusual ordering of the coordinates allows for
+        fast access to individual layers.
+        '''
 
         self.version = CurrentMapVersion
         """
@@ -355,6 +238,39 @@ class BaseMap(object):
         will be saved as; map files are always saved as the latest
         version of the map file format.
         """
+        
+        # Go ahead and initialize the tile collection
+        self._InitBlankMap(width, height, depth)
+    
+    def _InitBlankMap(self, width, height, depth):
+        '''
+        Initializes the map to a completely blank map.
+        
+        @type width: integer
+        @param width: Width of new map to initialize
+        
+        @type height: integer
+        @param height: Height of new map to initialize
+        
+        @type depth: integer
+        @param depth: Depth of new map to initialize
+        '''
+        # validate parameters
+        if width < 1 or height < 1 or depth < 1:
+            raise MapError("Map must have positive dimensions to be initialized")
+        
+        # initialize blank tiles
+        tiles = []
+        for z in range(depth):
+            self.tiles.append([])
+            for x in range(width):
+                self.tiles[z].append([])
+                for y in range(height):
+                    tile = Tile()
+                    tile.x = x
+                    tile.y = y
+                    tile.z = z
+                    self.tiles[z][x].append(tile)
         
     @property
     def width(self):
@@ -377,6 +293,17 @@ class BaseMap(object):
     @height.setter
     def height(self, height):
         self.header.height = height
+    
+    @property
+    def depth(self):
+        '''
+        Convenience property that abstracts the depth out of the header.
+        '''
+        return self.header.depth
+    
+    @depth.setter
+    def depth(self, depth):
+        self.header.depth = depth
     
     @property
     def northmap(self):
@@ -480,13 +407,35 @@ class BaseMap(object):
         # first up is the header.
         self.header.Deserialize(fileobj, formatver)
 
-        # resize the map as needed
-        self.Resize(self.header.width, self.header.height)
+        # initialize the map to the correct dimensions
+        self._InitBlankMap(self.width, self.height, self.depth)
 
         # now we read in each tile
-        for y in range(self.header.height):
-            for x in range(self.header.width):
-                self.tiles[x][y] = Tile().Deserialize(fileobj)
+        try:
+            while True:
+                # read in the next tile
+                try:
+                    tile = Tile().Deserialize(fileobj, formatver)
+                except IOError as e:
+                    raise MapError("Invalid/corrupt map file", e)
+                # validate the tile
+                if tile.x < 1 or tile.x > self.width:
+                    # invalid tile
+                    raise MapError("invalid tile found: x-coordinate out of bounds")
+                elif tile.y < 1 or tile.y > self.height:
+                    # invalid tile
+                    raise MapError("invalid tile found: y-coordinate out of bounds")
+                elif tile.z < 1 or tile.z > self.depth:
+                    # invalid tile
+                    raise MapError("invalid tile found: z-coordinate out of bounds")
+                elif tile.tileid < 0:
+                    # invalid tile
+                    raise MapError("invalid tile found: negative sprite index")
+                # store the tile
+                self.tiles[tile.z][tile.x][tile.y] = tile
+        except EndOfSectionException:
+            # This is raised when the tiles section ends; it's a good thing.
+            pass    # Continue loading the map.
     
     def SaveMapToFile(self, filepath):
         """
@@ -509,26 +458,27 @@ class BaseMap(object):
         You should be expecting this method to raise some sort of I/O related
         error; it is your responsibility to handle these errors.
         
+        @raise IOError: Not directly raised, but you should expect these to
+        occur and handle them accordingly.
+        
         @type fileobj: C{file}
         @param fileobj: An open file object (or compatible stream) to
         write the map to.
         """
         # write the meta-header
-        try:
-            mheader = self.MetaheaderStruct.pack(self.MagicNumber, CurrentMapVersion)
-            fileobj.write(mheader)
-        except Exception as e:
-            raise IOError("error while writing map file", e)
+        mheader = self.MetaheaderStruct.pack(self.MagicNumber, CurrentMapVersion)
+        fileobj.write(mheader)
         
         # write the header
         self.header.Serialize(fileobj)
         
         # write the tiles
-        for tileY in range(self.header.height):
-            for tileX in range(self.header.width):
-                self.tiles[tileX][tileY].Serialize(fileobj)
+        for z in self.depth:
+            for x in self.width:
+                for y in self.height:
+                    self.tiles[z][x][y].Serialize(fileobj)
     
-    def Resize(self, width, height):
+    def Resize(self, width, height, depth):
         """
         Resizes a map to the given dimensions.
         
@@ -538,40 +488,62 @@ class BaseMap(object):
         @type height: integer
         @param height: New height, in tiles, of the map.
         """
-        # check the width and height
-        if width <= 0 or height <= 0:
+        # check the dimensions
+        if width <= 0 or height <= 0 or depth <= 0:
             # invalid dimensions
             raise IndexError("map dimensions must be greater than 0")
+        
+        # are we increasing in depth?
+        if depth > self.header.depth:
+            # add and fill new Z components
+            for z in range(self.header.depth, depth):
+                self.tiles[z] = []
+                for x in range(self.header.width):
+                    self.tiles[z][x] = []
+                    for y in range(self.header.height):
+                        # insert a new blank tile
+                        self.tiles[z][x][y] = Tile()
+        # if not, then are we decreasing in depth?
+        elif depth < self.header.depth:
+            # destroy the Z components
+            for z in range(depth, self.header.depth):
+                del self.tiles[z]
+        
         # are we increasing in width?
         if width > self.header.width:
             # add and fill new X components
-            for x in range(self.header.width, width):
-                self.tiles[x] = []
-                for y in range(self.header.height):
-                    # insert a new blank tile
-                    self.tiles[x][y] = Tile()
+            for z in range(depth):
+                for x in range(self.header.width, width):
+                    self.tiles[z][x] = []
+                    for y in range(self.header.height):
+                        # insert a new blank tile
+                        self.tiles[z][x][y] = Tile()
         # if not, then are we decreasing in width?
         elif width < self.header.width:
             # destroy the X components
-            for i in range(width, self.header.width):
-                del self.tiles[i]
+            for z in range(depth):
+                for x in range(width, self.header.width):
+                    del self.tiles[z][x]
         
         # now check the height - is it increasing?
         if height > self.header.height:
             # add new Y components
             for y in range(self.header.height, height):
                 for x in range(width):
-                    self.tiles[x][y] = Tile()
+                    for z in range(depth):
+                        self.tiles[z][x][y] = Tile()
         # if not, are we decreasing in height?
         elif height < self.header.height:
             # destroy some Y components
             for y in range(height, self.header.height):
                 for x in range(width):
-                    del self.tiles[x][y]
+                    for z in range(depth):
+                        del self.tiles[z][x][y]
         
         # update the dimensions in the header
         self.header.width = width
         self.header.height = height
+        self.header.depth = depth
 
 
 class MapHeader(object):
@@ -586,11 +558,14 @@ class MapHeader(object):
         """
         Creates a new header with default values.
         """
-        self.width = 0
+        self.width = 1
         """Width of the map in tiles."""
 
-        self.height = 0
+        self.height = 1
         """Height of the map in tiles."""
+        
+        self.depth = 1
+        '''Number of layers in the map.'''
 
         self.mapname = u""
         """Descriptive, human-readable name of the map."""
@@ -623,10 +598,9 @@ class MapHeader(object):
         # nothing too special, just write everything in the right order
         try:
             BinaryStructs.SerializeUTF8String(fileobj, self.mapname)
-            tmpstr = BinaryStructs.UintStruct.pack(self.width)
-            fileobj.write(tmpstr)
-            tmpstr = BinaryStructs.UintStruct.pack(self.height)
-            fileobj.write(tmpstr)
+            BinaryStructs.SerializeUint(fileobj, self.width)
+            BinaryStructs.SerializeUint(fileobj, self.height)
+            BinaryStructs.SerializeUint(fileobj, self.depth)
             BinaryStructs.SerializeUTF8String(fileobj, self.northmap)
             BinaryStructs.SerializeUTF8String(fileobj, self.eastmap)
             BinaryStructs.SerializeUTF8String(fileobj, self.southmap)
@@ -638,7 +612,7 @@ class MapHeader(object):
         try:
             contentFlags = 0
             if self.stripped:
-                contentFlags = contentFlags | self.Flag_ContentStripped
+                contentFlags |= self.Flag_ContentStripped
             tmpstr = BinaryStructs.UintStruct.pack(contentFlags)
             fileobj.write(tmpstr)
         except Exception as e:
@@ -659,25 +633,38 @@ class MapHeader(object):
             # latest version of the header format!
             # again, we're just reading everything in the right order
             # first up is the basic file information
-            self.mapname = BinaryStructs.DeserializeUTF8String(fileobj)
-            self.mapname.strip()
-            tmpstr = fileobj.read(BinaryStructs.UintStruct.size)
-            self.width = BinaryStructs.UintStruct.unpack(tmpstr)
-            tmpstr = fileobj.read(BinaryStructs.UintStruct.size)
-            self.height = BinaryStructs.UintStruct.unpack(tmpstr)
+            try:
+                self.mapname = BinaryStructs.DeserializeUTF8String(fileobj)
+                self.mapname.strip()
+                self.width = BinaryStructs.DeserializeUint(fileobj)
+                self.height = BinaryStructs.DeserializeUint(fileobj)
+                self.depth = BinaryStructs.DeserializeUint(fileobj)
+            except Exception as e:
+                raise MapError("Map file is invalid/corrupt.", e)
+            
+            # validate the basic file information
+            if self.width < 1 or self.height < 1 or self.depth < 1:
+                # invalid dimensions
+                raise MapError("Map file is invalid/corrupt: dimensions")
             
             # now we read in the links
-            self.northmap = BinaryStructs.DeserializeUTF8String(fileobj)
-            self.northmap.strip()
-            self.eastmap = BinaryStructs.DeserializeUTF8String(fileobj)
-            self.eastmap.strip()
-            self.southmap = BinaryStructs.DeserializeUTF8String(fileobj)
-            self.southmap.strip()
-            self.westmap = BinaryStructs.DeserializeUTF8String(fileobj)
-            self.westmap.strip()
+            try:
+                self.northmap = BinaryStructs.DeserializeUTF8String(fileobj)
+                self.northmap.strip()
+                self.eastmap = BinaryStructs.DeserializeUTF8String(fileobj)
+                self.eastmap.strip()
+                self.southmap = BinaryStructs.DeserializeUTF8String(fileobj)
+                self.southmap.strip()
+                self.westmap = BinaryStructs.DeserializeUTF8String(fileobj)
+                self.westmap.strip()
+            except Exception as e:
+                raise MapError("Map file is invalid/corrupt.", e)
             
             # and then we read in the content flags...
-            contentflags = BinaryStructs.DeserializeUint(fileobj)
+            try:
+                contentflags = BinaryStructs.DeserializeUint(fileobj)
+            except Exception as e:
+                raise MapError("Map file is invalid/corrupt.", e)
             self.stripped = contentflags & self.Flag_ContentStripped
             
         else:

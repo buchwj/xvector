@@ -19,8 +19,6 @@
 Contains code for displaying and editing a map within the editor.
 """
 
-import sys
-
 from xVLib import Maps
 from xVClient import MapRender, ErrorReporting
 from PyQt4 import QtCore, QtGui
@@ -101,7 +99,7 @@ class NewMapDialog(QtGui.QDialog):
         widget = EditorWidget(parent=self.parent().ui.mdiArea, map=NewMap)
         wnd = self.parent().ui.mdiArea.addSubWindow(widget)
         wnd.setWindowTitle(name)
-        self.parent().ui.mdiArea.setActiveSubWindow(wnd)
+        wnd.show()
     
     def OnCancel(self):
         """
@@ -117,7 +115,7 @@ class LayerSelector(QtGui.QWidget):
     This appears at the top of every EditorWidget.
     '''
     
-    def __init__(self, parent=None, value=1):
+    def __init__(self, parent=None, value=0):
         '''
         Creates a new layer selector widget.
         
@@ -147,8 +145,8 @@ class LayerSelector(QtGui.QWidget):
         self.Layout.setAlignment(self.lblCaption, QtCore.Qt.AlignRight)
         
         self.spnLayer = QtGui.QSpinBox(parent=self)
-        self.spnLayer.setMinimum(-9000)
-        self.spnLayer.setMaximum(9000)
+        self.spnLayer.setMinimum(0)
+        self.spnLayer.setMaximum(9999)
         self.spnLayer.setValue(value)
         self.spnLayer.setSizePolicy(self.SizePolicy)
         self.Layout.addWidget(self.spnLayer)
@@ -189,16 +187,22 @@ class EditorWidget(QtGui.QWidget):
         self.Layout = QtGui.QVBoxLayout()
         self.Layout.setSpacing(0)
         self.Layout.setMargin(0)
+        self.Layout.addStretch(1)
         self.setLayout(self.Layout)
         
+        # we want all of this stuff to be resizable
+        policy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                   QtGui.QSizePolicy.Expanding)
+        
         # create the layer selector and add it
-        self.LayerSel = LayerSelector(parent=self, value=1)
+        self.LayerSel = LayerSelector(parent=self, value=0)
         '''The layer selector widget.'''
         self.Layout.addWidget(self.LayerSel)
 
         # create the scroll area and add it
         self.ScrollArea = QtGui.QScrollArea(parent=self)
         """The scroll area that contains the MapWidget."""
+        self.ScrollArea.setSizePolicy(policy)
         self.Layout.addWidget(self.ScrollArea)
         
         # create the status bar and add it
@@ -213,7 +217,7 @@ class EditorWidget(QtGui.QWidget):
         self.StatusBar.addPermanentWidget(self.CoordinateLabel)
         
         # create our map widget and add it
-        self.MapWidget = MapWidget(parent=self.ScrollArea, map=map)
+        self.MapWidget = MapEditWidget(parent=self.ScrollArea, map=map)
         self.ScrollArea.setWidget(self.MapWidget)
         
         # fix the tab order
@@ -223,7 +227,7 @@ class EditorWidget(QtGui.QWidget):
         self.Layout.addStretch(1)
 
 
-class MapWidget(QtGui.QWidget):
+class MapEditWidget(QtGui.QWidget):
     """
     Widget that displays a map and allows it to be edited.
 
@@ -242,6 +246,10 @@ class MapWidget(QtGui.QWidget):
         # set up some attributes
         self._map = None
         """Internal handle to the map; access this via object.map instead."""
+        self.renderer = MapRender.MapRenderer()
+        '''Renderer object for our map.'''
+        self.current_layer = 0
+        '''Current layer (used to determine alpha blending in rendering)'''
 
         self.map = map
 
@@ -254,7 +262,10 @@ class MapWidget(QtGui.QWidget):
         # typecheck
         if not isinstance(newmap,Maps.BaseMap):
             raise TypeError("map must inherit Maps.BaseMap")
+        
+        # set the new map and inform the renderer
         self._map = newmap
+        self.renderer.map = self._map
 
     def paintEvent(self, event):
         """
@@ -270,48 +281,33 @@ class MapWidget(QtGui.QWidget):
         # figure out what we need to redraw
         rect = event.rect()
         rx1, ry1, rx2, ry2 = rect.getCoords()
-        tlx, tly = MapRender.GetTileTL(rx1, ry1)
-        brx, bry = MapRender.GetTileBR(rx2, ry2)
-        tiles_wide = (brx - tlx) // Maps.TileWidth
-        base_w = tlx // Maps.TileWidth
-        tiles_high = (bry - tly) // Maps.TileHeight
-        base_h = tly // Maps.TileHeight
+        width = rect.width()
+        height = rect.height()
+        targetCoords = (rx1, ry1)
+        sourceCoords = targetCoords         # 1:1 mapping here
         
-        # get an active painter 
+        # blank the region
         painter = QtGui.QPainter()
         painter.begin(self)
-        painter.setClipRect(rect)
-        
-        # white-out our target
+        painter.setPen(QtCore.Qt.NoPen)
         whiteBrush = QtGui.QBrush(QtCore.Qt.white)
-        painter.fillRect(rect, whiteBrush)
+        painter.setBrush(whiteBrush)
+        targetRect = QtCore.QRect(rx1, ry1, width, height)
+        painter.fillRect(targetRect, whiteBrush)
+        painter.end()
         
-        # DRAW. THE. TILES. (left to right, top to bottom)
-        for rel_tileY in range(tiles_high):
-            tileY = base_h + rel_tileY
-            for rel_tileX in range(tiles_wide):
-                # check if tile is in bounds
-                tileX = base_w + rel_tileX
-                if tileX > self.map.header.width:
-                    # out of bounds, don't draw anything
-                    continue
-                elif tileY > self.map.header.height:
-                    # out of bounds, don't draw anything
-                    continue
-                
-                # figure out what we're drawing
-                try:
-                    tile = self.map.tiles[tileX][tileY]
-                except IndexError:
-                    # the tile grid does NOT agree with the map header!
-                    # insert a blank tile here!
-                    try:
-                        self.map.tiles[tileX][tileY] = Maps.Tile()
-                    except:
-                        # something is seriously wrong
-                        raise Maps.MapError("tile was nonexistant and could not be created")
-                
-                # okay, now we have to draw all of the layers
+        # walk through the layers and render
+        for z in range(self.map.depth):
+            # layers above the current are rendered with some amount of
+            # transparency depending on their distance above the current
+            # layer; we determine this amount here.
+            distAbove = z - self.current_layer
+            if distAbove < 0: distAbove = 0
+            alpha = 255 - 50 * distAbove
+            
+            # go ahead and render the layer
+            self.renderer.RenderLayer(self, targetCoords, sourceCoords, (0,0),
+                                      width, height, z, alpha)
     
     def sizeHint(self):
         """

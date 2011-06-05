@@ -153,7 +153,8 @@ class MapRenderer(object):
     This is certainly not the end-all class to map rendering, or even to
     the basic contents of the maps.  Note that this class does not handle
     neighboring maps (C{BaseMap.northmap}, C{BaseMap.southmap}, etc).  An
-    object of this class can only render one map at a time.
+    object of this class can only render one map at a time.  For a renderer which
+    handles neighboring maps, see the FullMapRenderer class.
     """
 
     def __init__(self, map=None):
@@ -167,7 +168,7 @@ class MapRenderer(object):
         self.map = map
         """Map object that this renderer is connected to."""
 
-    def _GetTileMajorXY(self, minor_x, minor_y):
+    def GetTileMajorXY(self, minor_x, minor_y):
         """
         Gets the major X-coordinate of a tile given the coordinates
         of the tile.
@@ -189,214 +190,153 @@ class MapRenderer(object):
         major_y = minor_y // Maps.TileHeight
         return (major_x, major_y)
 
-    def RenderNegative(self, painter, src_rect=None, dst_rect=None):
-        """
-        Renders the negative layers of the map in the region given by
-        C{src_rect}.
-
-        You do not need to worry about this method changing the properties
-        of C{painter}; the painter will emerge from this method with the
-        same properties it had when the method was called.
-
-        If no destination rect is passed, this method will, by default,
-        render the map to point (0,0).  If no source rect is passed,
-        the entire map will be rendered beginning with point (0,0) in the map.
-
-        @type painter: QtGui.QPainter
-        @param painter: Painter to use for rendering
-
-        @type src_rect: C{QtCore.QRect}
-        @param src_rect: Area of the map that needs to be rendered, in pixels.
-
-        @type dst_rect: C{QtCore.QRect}
-        @param dst_rect: Area to render the map to, in pixels.
-
-        @raise MapRenderError: Raised if the map is not valid or not set.
-        @raise TypeError: Raised if a parameter has an invalid type.
-        """
-        # typecheck the parameters
-        if not isinstance(painter, QtGui.QPainter):
-            raise TypeError("painter must be of type QtGui.QPainter")
-        if src_rect != None and not isinstance(src_rect, QtCore.QRect):
-            raise TypeError("rect must be of type QtCore.QRect")
-        if dst_rect != None and not isinstance(dst_rect, QtCore.QRect):
-            raise TypeError("rect must be of type QtCore.QRect")
+    def RenderMap(self, surface, target_coords, source_coords, target_offset,
+                  width, height):
+        '''
+        Draws a portion of the map to the given surface.
         
-        # check if we even have a map model to use
-        if not self.map:
-            raise MapRenderError("no map attached to renderer")
-
-        # pre-process our rects
-        source = None
-        if src_rect == None:
-            # create a default rect that covers the full map
-            source = QtCore.QRect(0,0,0,0)
-            source.setWidth(self.map.width * Maps.TileWidth)
-            source.setHeight(self.map.height * Maps.TileHeight)
-        else:
-            # a rect was passed in
-            source = src_rect
-
-        dest = None
-        if dst_rect == None:
-            # create a default rect of the maximum possible size
-            dest = QtCore.QRect(0,0,0,0)
-            idealWidth = self.map.width * Maps.TileWidth
-            idealHeight = self.map.height * Maps.TileHeight
-            if idealWidth > painter.width():
-                dest.setWidth(painter.width())
-            else:
-                dest.setWidth(idealWidth)
-            if idealHeight > painter.height():
-                dest.setHeight(painter.height())
-            else:
-                dest.setHeight(idealHeight)
-        elif isinstance(dst_rect, QtCore.QRect):
-            dest = dst_rect
-
-        # calculate our major ranges
-        ul_tx, ul_ty = self._GetTileMajorXY(source.x(), source.y())
-        brx = source.x() + source.width()
-        bry = source.y() + source.height()
-        br_tx, br_ty = self._GetTileMajorXY(brx, bry)
-
-        # backup the painter's state
-        painter.save()
-        painter.setClipRect(dest)
-
-        # iterate through our tiles
-        for MajX in range(ul_tx, br_tx):
-            for MajY in range(ul_ty, br_ty):
-                # find the actual target region
-                naive_target = QtCore.QRect(0,0,0,0)
-                naive_target.setX(MajX * Maps.TileWidth)
-                naive_target.setY(MajY * Maps.TileHeight)
-                naive_target.setWidth(Maps.TileWidth)
-                naive_target.setHeight(Maps.TileHeight)
-                
-                real_target = naive_target.intersected(dest)
-                if real_target.isNull():
-                    # this tile will be entirely clipped; skip it
-                    continue
-
-                # render the tile
-                self._RenderNegativeTile(painter, MajX, MajY, naive_target)
-
-        # restore the painter's state
-        painter.load()
-
-    def _RenderNegativeTile(self, painter, major_x, major_y, dst_rect):
-        """
-        Renders the negative-depth layers of a tile to the target.
-
-        Be warned that this method may alter the state of the painter.
-        If you need to keep settings, call C{painter.save()} and
-        C{painter.load()} around the call to this method.
-
-        @type painter: C{QtGui.QPainter}
-        @param painter: painter object to use for rendering
-
-        @type major_x: integer
-        @param major_x: tile's X coordinate in the tile grid
-
-        @type major_y: integer
-        @param major_y: tile's Y coordinate in the tile grid
-
-        @type dst_rect: C{QtCore.QRect}
-        @param dst_rect: Rect of the target surface to draw to
-
-        @raise IndexError: Raised if the coordinates are out-of-bounds.
-        @raise MapRenderError: Raised if the tile is invalid within the map.
-        """
-        # check the specified coordinates
-        if major_x < 0 or major_y < 0:
-            raise IndexError("major coordinates are out-of-bounds")
-        elif major_x >= self.map.width() or major_y >= self.map.height():
-            raise IndexError("major coordinates are out-of-bounds")
-
-        # grab our tile
-        tile = self.map.tiles[major_x][major_y]
-        if not isinstance(tile, Maps.Tile):
-            # invalid tile
-            err = "invalid tile at (%d, %d)" % (major_x, major_y)
-            raise MapRenderError(err)
-
-        # walk through each layer
-        for depth, layer in sorted(tile.layers.items()):
-            # check the depth
-            if depth > 0:
-                # this is now out of our domain
-                break
-            # render the layer
-            self._RenderSingleLayer(layer, painter, dst_rect)
+        @type surface: C{QtGui.QPaintDevice}
+        @param surface: Target surface to render to
+        
+        @type target_coords: integer tuple (coordinates, (x,y))
+        @param target_coords: Upper-left corner of target surface to render to
+        
+        @type source_coords: integer tuple (coordinates, (x,y))
+        @param source_coords: Absolute upper-left corner of map to render from
+        
+        @type target_offset: integer tuple (coordinates, (x,y))
+        @param target_offset: The position in the target surface of the point
+        on the map given by (0,0).
+        
+        @type width: integer
+        @param width: Width of map section to render (pixels)
+        
+        @type height: integer
+        @param height: Height of map section to render (pixels)
+        '''
+        # Validate parameters
+        stlx,stly = source_coords
+        if stlx < 0 or stly < 0 or stlx > self.map.width * Maps.TileWidth     \
+            or stly > self.map.height * Maps.TileHeight:
+            raise IndexError("source coordinates out of bounds")
+        if width < 1 or height < 1:
+            raise MapRenderError("Rendered region dimensions must be >= 1")
+        
+        # Wipe the surface.
+        painter = QtGui.QPainter()
+        painter.begin(surface)
+        painter.setPen(QtCore.Qt.NoPen)
+        whiteBrush = QtGui.QBrush(QtCore.Qt.white)
+        painter.setBrush(whiteBrush)
+        
+        targetBaseX, targetBaseY = target_coords
+        targetRect = QtCore.QRect(targetBaseX, targetBaseY, width, height)
+        painter.fillRect(targetRect, whiteBrush)
+        
+        painter.end()
+        
+        # Walk through each layer and render, from lowest depth to highest
+        for z in range(self.map.depth):
+            self.RenderLayer(surface, target_coords, source_coords,
+                             target_offset, width, height, z)
     
-    def _RenderPositiveTile(self, painter, major_x, major_y, dst_rect):
-        """
-        Renders the positive-depth layers of a tile to the target.
-
-        Be warned that this method may alter the state of the painter.
-        If you need to keep settings, call C{painter.save()} and
-        C{painter.load()} around the call to this method.
-
-        @type painter: C{QtGui.QPainter}
-        @param painter: painter object to use for rendering
-
-        @type major_x: integer
-        @param major_x: tile's X coordinate in the tile grid
-
-        @type major_y: integer
-        @param major_y: tile's Y coordinate in the tile grid
-
-        @type dst_rect: C{QtCore.QRect}
-        @param dst_rect: Rect of the target surface to draw to
-
-        @raise IndexError: Raised if the coordinates are out-of-bounds.
-        @raise MapRenderError: Raised if the tile is invalid within the map.
-        """
-        # check the specified coordinates
-        if major_x < 0 or major_y < 0:
-            raise IndexError("major coordinates are out-of-bounds")
-        elif major_x >= self.map.width() or major_y >= self.map.height():
-            raise IndexError("major coordinates are out-of-bounds")
-
-        # grab our tile
-        tile = self.map.tiles[major_x][major_y]
-        if not isinstance(tile, Maps.Tile):
-            # invalid tile
-            err = "invalid tile at (%d, %d)" % (major_x, major_y)
-            raise MapRenderError(err)
+    def RenderLayer(self, surface, target_coords, source_coords, target_offset,
+                    width, height, layer, alpha=255):
+        '''
+        Draws a portion of a single depth layer of the map to the given surface.
         
-        # check which layers are left to render
+        This method will not wipe the surface prior to rendering.  If there is
+        garbage below, it will remain visible through any transparent render.
+        This is useful if one layer is being rendered atop another.
         
-
-        # walk through each layer
-        for depth, layer in sorted(tile.layers.items()):
-            # check the depth
-            if depth > 0:
-                # this is now out of our domain
-                break
-            # render the layer
-            self._RenderSingleLayer(layer, painter, dst_rect)
-            
-    def _RenderSingleLayer(self, layer, painter, dst_rect):
-        """
-        Renders a single layer of the map to the target.
+        @raise IndexError: Raised if the supplied source coordinates are out
+        of bounds.
         
-        @type layer: L{xVLib.Maps.Layer}
-        @param layer: Layer to render.
+        @raise MapRenderError: Raised if other supplied parameters are not
+        valid for this map.
         
-        @type painter: C{QtGui.QPainter}
-        @param painter: Painter object to use for rendering.
+        @type surface: C{QtGui.QPaintDevice}
+        @param surface: Target surface to render to
         
-        @type dst_rect: C{QtCore.QRect}
-        @param dst_rect: Target rect to render to.
-        """
-        # what type of layer is this?
-        if layer.animated:
-            # animation layer
-            pass    # TODO: Implement
-
-        else:
-            # static layer
-            sprite = Sprite.GetSpriteSet("tiles")[layer.content_id]
-            painter.drawPixmap(dst_rect, sprite.img)
+        @type target_coords: integer tuple (coordinates, (x,y))
+        @param target_coords: Upper-left corner of target surface to render to
+        
+        @type source_coords: integer tuple (coordinates, (x,y))
+        @param source_coords: Absolute upper-left corner of map to render from
+        
+        @type target_offset: integer tuple (coordinates, (x,y))
+        @param target_offset: The position in the target surface of the point
+        on the map given by (0,0).
+        
+        @type width: integer
+        @param width: Width of map section to render (pixels)
+        
+        @type height: integer
+        @param height: Height of map section to render (pixels)
+        
+        @type layer: integer
+        @param layer: Layer number to render
+        
+        @type alpha: integer
+        @param alpha: Alpha to blend this layer with (255 = opaque)
+        '''
+        # Validate parameters
+        stlx,stly = source_coords
+        if stlx < 0 or stly < 0 or stlx > self.map.width * Maps.TileWidth     \
+            or stly > self.map.height * Maps.TileHeight:
+            raise IndexError("source coordinates out of bounds")
+        if width < 1 or height < 1:
+            raise MapRenderError("Rendered region dimensions must be >= 1")
+        if layer < 0 or layer > self.map.depth:
+            raise MapRenderError("Cannot render a layer which does not exist.")
+        
+        # Prepare the surface
+        painter = QtGui.QPainter()
+        painter.begin(surface)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.setOpacity(alpha / 255.0)
+        
+        # Set the clipping rectangle
+        targetBaseX, targetBaseY = target_coords
+        targetRect = QtCore.QRect(targetBaseX, targetBaseY, width, height)
+        painter.setClipRect(targetRect)
+        
+        # Adjust our render to the correct point on the surface.
+        targetStartX, targetStartY = target_offset
+        
+        # Figure out what we're rendering
+        current_layer = self.map.tiles[layer]
+        startX, startY = GetTileTL(stlx,stly)
+        endX, endY = GetTileTL(stlx + width, stly + height)
+        startX //= Maps.TileWidth
+        startY //= Maps.TileHeight
+        endX = endX // Maps.TileWidth + 1
+        endY = endY // Maps.TileHeight + 1
+        if endX > self.map.width: endX = self.map.width
+        if endY > self.map.height: endY = self.map.height
+        
+        # Render
+        for x in range(startX, endX):
+            for y in range(startY, endY):
+                # acquire the tile
+                try:
+                    tile = current_layer[x][y]
+                except IndexError:
+                    # tile not found; skipif endY > self.map.height: endY = self.map.height
+                    print "[warning] tried to render tile out of bounds"
+                    print "\tcoordinates:", x, ",", y
+                    continue
+                # do we have the sprite?
+                try:
+                    sprite = Sprite.spritesets['tiles'][tile.tileid]
+                except KeyError:
+                    # we don't have the sprite for this tile; skip
+                    print "[warning] tile", tile.tileid, "not found, skipping"
+                    continue
+                # render the sprite
+                targetX = x * Maps.TileWidth + targetStartX
+                targetY = y * Maps.TileHeight + targetStartY
+                painter.drawPixmap(targetX, targetY, sprite.img)
+        
+        # Clean up.
+        painter.end()

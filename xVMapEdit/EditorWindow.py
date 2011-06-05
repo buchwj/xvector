@@ -57,7 +57,7 @@ class ResourceToggle(object):
         self.TileButton.setIcon(tile_icon)
         self.TileButton.setCheckable(True)
         self.TileButton.setChecked(True)
-        self.TileButton.setToolTip(_("Static Tiles"))
+        self.TileButton.setToolTip(_("Tiles"))
         self.ButtonGroup.addButton(self.TileButton, self.ID_Tiles)
         
         self.ItemButton = QtGui.QToolButton()
@@ -147,6 +147,8 @@ class MainWindow(QtGui.QMainWindow):
         # add the resource toggle
         self.restoggle = ResourceToggle(self)
         self.restoggle.Attach(self.ui.toolBar)
+        
+        # configure the MDI area
 
         # hook the menu signals to the appropriate slots
         self.connect(self.ui.action_New, QtCore.SIGNAL("triggered()"),

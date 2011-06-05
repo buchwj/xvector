@@ -113,15 +113,16 @@ Table 2, Header Structure
 	utf-8		Map name
 	u-int		Width
 	u-int		Height
+	u-int		Depth
 	utf-8		North-border map
 	utf-8		East-border map
 	utf-8		South-border map
 	utf-8		West-border map
 
 	
-==================
- Tiles and Layers
-==================
+=======
+ Tiles
+=======
 
 Next up are the tiles.  Each tile begins with a 32-bit (4-byte) integer
 containing some XOR'd flags about the tile, as follows.
@@ -130,25 +131,11 @@ Table 3, Tile Flags
 
 	bit			flag
 	----		-----
-	0..31		unused
-
-Following this is an unsigned integer indicating the number of layers that the
-tile consists of.  Each individual layer is represented by a simple structure;
-it begins with a 32-bit signed integer that specifies the position (with a 
-negative number representing a position below the player, while a positive
-number indicates that the position is above the player; this MUST NOT be 0).
-Lower values indicate that the layer is drawn lower than those with higher
-values (duh).  This is followed by a flags field much like the one in the tile 
-structure.
-
-Table 4, Layer Flags
-
-	bit			flag
-	----		-----
 	0			blocked (players and NPCs cannot pass through tile if set)
-	1..31		unused
+	1..29		unused
+	30			end-of-tiles (notifies the loader that there are no more tiles)
 
-This structure is repeated for as many layers as exist.
+This is then followed by the tile structure.
 
 Table 5, Tile Structure
 	(Note: These offsets are relative to the start of the tile, not the file)
@@ -156,18 +143,22 @@ Table 5, Tile Structure
 	type		field
 	-----		------
 	u-int		flags
-	u-int		numlayers
-	array		sequence of layers
+	u-int		x-coordinate
+	u-int		y-coordinate
+	u-int		z-coordinate
+	u-int		sprite-id
 
-Table 6, Layer Structure
+These tile structures appear in the file one after the other.  They do not need
+to be ordered by coordinates; the loader will sort them out during load.  The
+tradeoff for this is a slightly larger filesize due to the stored coordinates,
+but this is mostly insignificant.  Should the loader encounter a tile with x-
+or y-coordinates that are out of the bounds given in the header, the tile will
+be discarded and an exception raised; however, the loader will attempt to
+continue loading the map file.
 
-	type		field
-	-----		------
-	s-int		depth
-	u-int		flags
-	u-int		sprite-id (or animation-id if animation flag set)
-
-These tile structures appear in the file one after the other, going by rows.
-In other words, (0,0) is the first tile, then (0,1), then (0,2), then (1,0),
-and so forth.  (Of course, that varies based on the width and height - that's
-just an example.)
+The loader will continue reading the tile structures until tile flag 31 is
+read.  Tile flag 31 should NOT be followed by the remaining fields; it is taken
+to indicate the end of the tiles section (which is, in this early version of
+the map format, the last section).  Storing additional data beyond flag 31 will
+result in a corrupt map file, and an exception will be raised if such data is
+encountered.

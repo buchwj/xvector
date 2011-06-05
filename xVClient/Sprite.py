@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # xVector Engine Client
 # Copyright (c) 2011 James Buchwald
 
@@ -431,7 +433,7 @@ def _LoadSpriteType(type, fileprefix, basedir=""):
         # something went wrong
         msg = "The sprite directory could not be opened.\n\n"
         msg += "Details:\n" + str(e.args)
-        ErrorReporting.ShowError(msg, ErrorReporting.ERROR_FATAL)
+        ErrorReporting.ShowError(msg, ErrorReporting.FatalError)
         raise SpriteLoadFailure(msg)
 
     # check each file for a match
@@ -456,7 +458,7 @@ def _LoadSpriteType(type, fileprefix, basedir=""):
             counter -= 1
             err = "Failed to load spritesheet from '" + filename + "'.\n\n"
             err += "Details:\n" + str(e.args[0])
-            ErrorReporting.ShowError(err, ErrorReporting.ERROR_FATAL)
+            ErrorReporting.ShowError(err, ErrorReporting.FatalError)
             sys.exit()
 
     # Done!

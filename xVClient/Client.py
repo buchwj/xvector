@@ -84,7 +84,7 @@ class ClientApplication(object):
             # failed to load config file
             msg = "Failed to load the options file.\n\n"
             msg += "Details:\n" + str(e.args[0])
-            ErrorReporting.ShowError(msg, ErrorReporting.ERROR_FATAL)
+            ErrorReporting.ShowError(msg, ErrorReporting.FatalError)
             sys.exit(0)
             
         # set up our locales
