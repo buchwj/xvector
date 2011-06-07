@@ -269,7 +269,7 @@ class SpritesheetException(Exception): pass
 """Raised if a non-fatal error occurs while loading sprites."""
 
 
-class SpriteSet(dict):
+class SpriteSet(list):
     """
     Loads sprites from the appropriate directory and provides a mechanism
     to access them.
@@ -284,20 +284,18 @@ class SpriteSet(dict):
         """
         Creates a spriteset with default values.
         """
-        self.sprites = list()
-        '''Contains all of the sprites belonging to this set ordered by ID.'''
         
         self.type = "General"
         '''The type of sprite contained in this set.'''
         
-        self._idct = 0
+        self._idct = 1
         '''
         Counter variable used internally for ID assignment to multiple files.
         '''
         
         self._animations = []
         '''
-        List of all animations contained in self.sprites.
+        List of all animations contained in self.
         Used internally for framerate control.
         '''
 
@@ -313,6 +311,7 @@ class SpriteSet(dict):
         meta = SpriteInfoParser(metafile)
         
         start_id = self._idct
+        this_file = 0
 
         # now grab the image file
         filepath = metafile[:len(metafile)-4] + "png"
@@ -331,6 +330,24 @@ class SpriteSet(dict):
             raise SpritesheetException(os.path.basename(filepath) \
                     + " contains fractional sprites.")
 
+        # get dimensions
+        width = meta.width
+        height = meta.height
+        type = meta.type
+        
+        # add a blank sprite with id 0, if one does not exist
+        if len(self) < 1:
+            Blank = Sprite(width, height, type, 0)
+            painter = QtGui.QPainter()
+            painter.begin(Blank.img)
+            clearBrush = QtGui.QBrush(QtGui.QColor(0,0,0,0))
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.setBrush(clearBrush)
+            targetRect = QtCore.QRect(0,0,width,height)
+            painter.fillRect(targetRect, clearBrush)
+            painter.end()
+            self.append(Blank)
+
         # okay, let's start looping on through the set!
         # y-
         # ^
@@ -348,20 +365,19 @@ class SpriteSet(dict):
             cur_ycoordBR = cur_ycoordUL + meta.height
 
             # extract the sprite
-            width = meta.width
-            height = meta.height
-            type = meta.type
-            
             try:
                 # this will except if this isn't an animation frame
-                baseID = start_id + meta.GetAnimationBaseID(i)
+                baseID = meta.GetAnimationBaseID(i)
                 
                 # if we make it here, this is an animation.
                 # create the new animation if this is the first frame
-                if baseID not in self.sprites:
-                    self.sprites[baseID] = AnimatedSprite(width, height,type,self._idct)
-                    self._animations.append(self.sprites[baseID])
-                anim = self.sprites[baseID]
+                if baseID > len(self):
+                    anim = AnimatedSprite(width, height, type, self._idct)
+                    self.append(AnimatedSprite(anim))
+                    self._animations.append(anim)
+                else:
+                    # animation already exists, add a frame to it
+                    anim = self[start_id + baseID]
                 
                 # load the frame
                 frame = len(anim.frames)
@@ -383,7 +399,7 @@ class SpriteSet(dict):
                                  QtCore.QPoint(cur_xcoordBR,cur_ycoordBR)))
                 painter.end()
                 # record the sprite
-                self[newsprite.sprite_id] = newsprite
+                self.append(newsprite)
             finally:
                 self._idct = self._idct + 1
         

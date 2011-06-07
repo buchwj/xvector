@@ -23,7 +23,7 @@ information; however, it also contains some configuration variables
 that should not (and do not need to be) modified except by developers.
 """
 
-APP_NAME = _("xVector Engine Client")
+APP_NAME = "xVector Engine Client"
 """The human-readable name of the application.  Used in title bars, etc."""
 
 

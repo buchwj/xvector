@@ -23,11 +23,6 @@ Main script for the client.
 
 from PyQt4 import QtGui
 import sys
-import gettext
-
-# constants related to i18n
-I18N_DOMAIN = "xVClient"
-"""The 'domain' used within gettext for localization."""
 
 # Do we need to do pre-run configuration?
 if __name__ == "__main__":
@@ -37,8 +32,7 @@ if __name__ == "__main__":
     import os
     import os.path
     os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
-    # internationalization stuff
-    gettext.install(I18N_DOMAIN, "locales/")
+
     # check that xVLib is installed
     try:
         import xVLib
@@ -86,15 +80,6 @@ class ClientApplication(object):
             msg += "Details:\n" + str(e.args[0])
             ErrorReporting.ShowError(msg, ErrorReporting.FatalError)
             sys.exit(0)
-            
-        # set up our locales
-        locale = ClientConfig.GetConfig().locale
-        try:
-            translation = gettext.translation(I18N_DOMAIN, languages=[locale])
-            translation.install()
-        except IOError:
-            # the translation wasn't found
-            print "warning: locale not found. defaulting to internal locale."
 
         # set up the application basics
         self.mainwnd = ClientWindow.ClientWindow()
@@ -105,9 +90,6 @@ class ClientApplication(object):
         # run the application
         self.mainwnd.Display()
         retval = self.qtapp.exec_()
-
-        # clean up after the application
-
 
         # all done
         return retval

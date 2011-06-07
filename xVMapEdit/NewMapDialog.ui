@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>257</width>
-    <height>192</height>
+    <height>212</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>150</y>
+     <y>170</y>
      <width>211</width>
      <height>32</height>
     </rect>
@@ -35,19 +35,19 @@
      <x>10</x>
      <y>10</y>
      <width>231</width>
-     <height>131</height>
+     <height>151</height>
     </rect>
    </property>
    <property name="title">
     <string>Options</string>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>0</x>
       <y>30</y>
       <width>231</width>
-      <height>95</height>
+      <height>120</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout">
@@ -117,6 +117,23 @@
        </property>
        <property name="value">
         <number>16</number>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblDepth">
+       <property name="text">
+        <string>Depth:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="spnDepth">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>99999999</number>
        </property>
       </widget>
      </item>

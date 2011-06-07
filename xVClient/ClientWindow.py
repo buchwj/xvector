@@ -49,11 +49,22 @@ class ClientWindow(QtGui.QMainWindow):
         """
         # do we want fullscreen?
         config = ClientConfig.GetConfig()
-        if config.GetBoolOption("fullscreen"):
-            # fullscreen mode
-            print "Running in fullscreen mode."
-            self.showFullScreen()
-        else:
+        fullscreen = False
+        try:
+            if config.GetBoolOption("fullscreen"):
+                # fullscreen mode
+                print "Running in fullscreen mode."
+                fullscreen = True
+            else:
+                # windowed mode
+                print "Running in windowed mode."
+                fullscreen = False
+        except:
             # windowed mode
             print "Running in windowed mode."
-            self.show()
+            fullscreen = False
+        finally:
+            if fullscreen:
+                self.showFullScreen()
+            else:
+                self.show()

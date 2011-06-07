@@ -210,6 +210,9 @@ class BaseMap(object):
         
         @type height: integer
         @param height: Height of the new map.  Must be greater than 0.
+        
+        @type depth: integer
+        @param depth: Number of layers in the new map.  Must be greater than 0.
         """
         # check the dimensions
         if width <= 0 or height <= 0:
@@ -220,6 +223,7 @@ class BaseMap(object):
         """Main header of the map file."""
         self.header.width = width
         self.header.height = height
+        self.header.depth = depth
 
         self.tiles = []
         '''
@@ -497,12 +501,12 @@ class BaseMap(object):
         if depth > self.header.depth:
             # add and fill new Z components
             for z in range(self.header.depth, depth):
-                self.tiles[z] = []
+                self.tiles[z].insert(z,[])
                 for x in range(self.header.width):
-                    self.tiles[z][x] = []
+                    self.tiles[z].insert(x,[])
                     for y in range(self.header.height):
                         # insert a new blank tile
-                        self.tiles[z][x][y] = Tile()
+                        self.tiles[z][x].insert(y,Tile())
         # if not, then are we decreasing in depth?
         elif depth < self.header.depth:
             # destroy the Z components
@@ -514,10 +518,10 @@ class BaseMap(object):
             # add and fill new X components
             for z in range(depth):
                 for x in range(self.header.width, width):
-                    self.tiles[z][x] = []
+                    self.tiles[z].insert(x,[])
                     for y in range(self.header.height):
                         # insert a new blank tile
-                        self.tiles[z][x][y] = Tile()
+                        self.tiles[z][x].insert(y,Tile())
         # if not, then are we decreasing in width?
         elif width < self.header.width:
             # destroy the X components
@@ -531,7 +535,7 @@ class BaseMap(object):
             for y in range(self.header.height, height):
                 for x in range(width):
                     for z in range(depth):
-                        self.tiles[z][x][y] = Tile()
+                        self.tiles[z][x].insert(y,Tile())
         # if not, are we decreasing in height?
         elif height < self.header.height:
             # destroy some Y components
@@ -681,4 +685,18 @@ class Map(BaseMap):
     way we can control how much the client knows.  The more the client knows,
     the easier it is for a hacker to take advantage of the system.
     """
-    pass        # for now, there's nothing special about the Map
+    def __init__(self, width=1, height=1, depth=1):
+        '''
+        Creates an empty map with the given dimensions.
+        
+        @type width: integer
+        @param width: Width of the new map.  Must be greater than 0.
+        
+        @type height: integer
+        @param height: Height of the new map.  Must be greater than 0.
+        
+        @type depth: integer
+        @param depth: Number of layers in the new map.  Must be greater than 0.
+        '''
+        # initialize the base map
+        super(Map, self).__init__(width, height, depth)

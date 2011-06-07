@@ -70,25 +70,25 @@ class NewMapDialog(QtGui.QDialog):
         """
         Called when the user clicks OK.
         """
-        print "[debug] NewMapDialog.OnOK()"
         # Validate user input
         name = self.uiobj.txtMapName.text()
         width = self.uiobj.spnWidth.value()
         height = self.uiobj.spnHeight.value()
+        depth = self.uiobj.spnDepth.value()
         if len(name) < 1:
             # Name cannot be blank
             error = "The map name cannot be blank."
             ErrorReporting.ShowError(error, ErrorReporting.WarningError)
             return
-        if width <= 0 or height <= 0:
+        if width <= 0 or height <= 0 or depth <= 0:
             # Invalid width/height
-            error = "Width and height must both be positive."
+            error = "All dimensions must be positive."
             QtGui.QMessageBox.warning(self, "Error", error)
             return
         
         # Create our new map
         try:
-            NewMap = Maps.Map(width=width, height=height)
+            NewMap = Maps.Map(width, height, depth)
         except Exception:
             ErrorReporting.ShowException(ErrorReporting.NormalError,
                                          "Error while creating new map.",
@@ -146,11 +146,15 @@ class LayerSelector(QtGui.QWidget):
         
         self.spnLayer = QtGui.QSpinBox(parent=self)
         self.spnLayer.setMinimum(0)
-        self.spnLayer.setMaximum(9999)
+        self.spnLayer.setMaximum(0)
         self.spnLayer.setValue(value)
         self.spnLayer.setSizePolicy(self.SizePolicy)
         self.Layout.addWidget(self.spnLayer)
         self.Layout.setAlignment(self.spnLayer, QtCore.Qt.AlignRight)
+        
+        # connect our signals and slots
+        self.connect(self.spnLayer, QtCore.SIGNAL("valueChanged(int)"),
+                     self.OnLayerChange)
     
     @property
     def layer(self):
@@ -162,6 +166,27 @@ class LayerSelector(QtGui.QWidget):
     @layer.setter
     def layer(self, newlayer):
         self.spnLayer.setValue(newlayer)
+    
+    @property
+    def max_depth(self):
+        '''
+        Property definition for getting and setting the maximum depth.
+        '''
+        return self.spnLayer.getMaximum() + 1
+    
+    @max_depth.setter
+    def max_depth(self, max):
+        self.spnLayer.setMaximum(max - 1)
+    
+    def OnLayerChange(self, layer):
+        '''
+        Called when the user changes the layer using the spin control.
+        
+        @type layer: integer
+        @param layer: User input.
+        '''
+        # notify the renderer
+        self.parent().MapWidget.current_layer = layer
 
 
 class EditorWidget(QtGui.QWidget):
@@ -197,6 +222,7 @@ class EditorWidget(QtGui.QWidget):
         # create the layer selector and add it
         self.LayerSel = LayerSelector(parent=self, value=0)
         '''The layer selector widget.'''
+        self.LayerSel.max_depth = map.depth
         self.Layout.addWidget(self.LayerSel)
 
         # create the scroll area and add it
@@ -217,14 +243,13 @@ class EditorWidget(QtGui.QWidget):
         self.StatusBar.addPermanentWidget(self.CoordinateLabel)
         
         # create our map widget and add it
-        self.MapWidget = MapEditWidget(parent=self.ScrollArea, map=map)
+        self.MapWidget = MapEditWidget(self.ScrollArea, map, 
+                                       self.CoordinateLabel)
+        '''Main editing widget.'''
         self.ScrollArea.setWidget(self.MapWidget)
         
         # fix the tab order
         self.setTabOrder(self.ScrollArea, self.LayerSel)
-        
-        # add a random stretcher
-        self.Layout.addStretch(1)
 
 
 class MapEditWidget(QtGui.QWidget):
@@ -236,9 +261,18 @@ class MapEditWidget(QtGui.QWidget):
     of as the corresponding view to a Maps.FullMap model.
     """
 
-    def __init__(self, parent=None, map=None):
+    def __init__(self, parent=None, map=None, statusbar=None):
         """
         Initializes the widget.
+        
+        @type parent: QtGui.QWidget
+        @param parent: Parent widget of this object.
+        
+        @type map: Maps.Map
+        @param map: Map to be edited in this widget
+        
+        @type statusbar: QtGui.QLabel
+        @param statusbar: Status bar element to be updated with the position.
         """
         # initialize the widget itself
         super(QtGui.QWidget, self).__init__(parent)
@@ -246,12 +280,21 @@ class MapEditWidget(QtGui.QWidget):
         # set up some attributes
         self._map = None
         """Internal handle to the map; access this via object.map instead."""
+        self.sbar = statusbar
+        '''Status bar element to be updated with cursor position.'''
         self.renderer = MapRender.MapRenderer()
         '''Renderer object for our map.'''
         self.current_layer = 0
         '''Current layer (used to determine alpha blending in rendering)'''
+        self.prev_tile = (-1,-1)
+        '''Last tile that mouse hovered over. Used to check tile changes.'''
+        self.usingTool = False
+        '''Is the user in the process of using a tool?'''
 
         self.map = map
+        
+        # Enable mouse tracking.
+        self.setMouseTracking(True)
 
     @property
     def map(self):
@@ -304,6 +347,7 @@ class MapEditWidget(QtGui.QWidget):
             distAbove = z - self.current_layer
             if distAbove < 0: distAbove = 0
             alpha = 255 - 50 * distAbove
+            if alpha < 0: alpha = 0
             
             # go ahead and render the layer
             self.renderer.RenderLayer(self, targetCoords, sourceCoords, (0,0),
@@ -321,3 +365,75 @@ class MapEditWidget(QtGui.QWidget):
         width = self.map.header.width * Maps.TileWidth
         height = self.map.header.height * Maps.TileHeight
         return QtCore.QSize(width, height)
+    
+    def mouseMoveEvent(self, event):
+        '''
+        Called when the mouse is moved.
+        
+        This is a reimplemented function from Qt 4's QWidget class.
+        We use it to update the status bar's position tracker.
+        
+        @type event: C{QtGui.QMouseEvent}
+        @param event: Mouse movement event from Qt
+        '''
+        # Where is the mouse currently located?
+        point = event.pos()
+        x = point.x()
+        y = point.y()
+        curtile = self.renderer.GetTileMajorXY(x, y)
+        tileX, tileY = curtile
+        
+        # Has the mouse moved onto a new tile?
+        tileChanged = False
+        if curtile != self.prev_tile:
+            # We're on a new tile
+            tileChanged = True
+            
+            # Update the status bar.
+            try:
+                text = "(" + str(tileX) + "," + str(tileY) + ")"
+                self.sbar.setText(text)
+            except:
+                # Looks like the status bar doesn't exist. Don't bother.
+                pass
+        
+        # Is the left mouse button being held down?
+        if event.buttons() & QtCore.Qt.LeftButton:
+            # Left button held down. Do we need to use the tool?
+            if tileChanged:
+                # But hold on.  Are we even using a tool?
+                if self.usingTool:
+                    # Alright, go ahead and use the tool.
+                    pass    # TODO: Implement
+        
+        # Processing complete, update the previous tile tracker
+        if tileChanged:
+            self.prev_tile = curtile
+        
+        # Let the widget do its usual thing with the mouse.
+        super(MapEditWidget,self).mouseMoveEvent(event)
+    
+    def mousePressEvent(self, event):
+        '''
+        Called when a mouse button is first pressed.
+        
+        This is a reimplemented function from Qt 4's QWidget class.
+        We use it to start using tools when the user clicks stuff.
+        
+        @type event: C{QtGui.QMouseEvent}
+        @param event: Mouse press event from Qt
+        '''
+        # Was the mouse press the left button?
+        if event.button() == QtCore.Qt.LeftButton:
+            # Where is the mouse currently located?
+            point = event.pos()
+            x = point.x()
+            y = point.y()
+            curtile = self.renderer.GetTileMajorXY(x, y)
+            tileX, tileY = curtile
+            
+            # Start using the tool.
+            # TODO: Implement
+        
+        # Let the widget do its usual thing with the mouse.
+        super(MapEditWidget,self).mousePressEvent(event)

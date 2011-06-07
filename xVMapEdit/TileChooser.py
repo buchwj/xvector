@@ -55,6 +55,7 @@ class TileChooserModel(object):
         # Check if the index is valid
         if id < 0 or id >= len(self.spriteset):
             # Invalid index
+            print "[WARNING WARNING WARNING]"
             raise IndexError("Tile index is out of range")
 
         # Select the tile
@@ -134,7 +135,7 @@ class TileChooserView(QtGui.QWidget):
         such that _GetTLFromID(_GetTileID(x,y)) = (x,y).
         """
         # check if id is valid
-        if id not in self.model.spriteset:
+        if id >= len(self.model.spriteset):
             raise KeyError("tile ID is out of bounds")
 
         # calculate
@@ -186,7 +187,7 @@ class TileChooserView(QtGui.QWidget):
                 tile_id = self._GetTileID(tile_x, tile_y)
 
                 # check if that tile exists
-                if tile_id not in self.model.spriteset:
+                if tile_id >= len(self.model.spriteset):
                     # doesn't exist
                     continue
 
@@ -250,8 +251,8 @@ class TileChooserView(QtGui.QWidget):
             prev_target = QtCore.QRect()
             prev_target.setX(prev_tlx - self.SelectorWidth)
             prev_target.setY(prev_tly - self.SelectorWidth)
-            prev_target.setWidth(Maps.TileWidth + 2 * self.SelectorWidth)
-            prev_target.setHeight(Maps.TileHeight + 2 * self.SelectorWidth)
+            prev_target.setWidth(Maps.TileWidth * 3)
+            prev_target.setHeight(Maps.TileHeight * 3)
             self.repaint(prev_target)
 
         # figure out what was clicked
@@ -259,7 +260,7 @@ class TileChooserView(QtGui.QWidget):
         clicked_y = event.y()
         tlx, tly = MapRender.GetTileTL(clicked_x, clicked_y)
         id = self._GetTileID(tlx, tly)
-        if id not in self.model.spriteset:
+        if id >= len(self.model.spriteset):
             # User clicked outside of the tiles, don't select anything
             return
 
@@ -268,6 +269,6 @@ class TileChooserView(QtGui.QWidget):
         target = QtCore.QRect()
         target.setX(tlx - self.SelectorWidth)
         target.setY(tly - self.SelectorWidth)
-        target.setWidth(Maps.TileWidth + 2 * self.SelectorWidth)
-        target.setHeight(Maps.TileHeight + 2 * self.SelectorWidth)
+        target.setWidth(3 * Maps.TileWidth)
+        target.setHeight(3 * Maps.TileHeight)
         self.repaint(target)

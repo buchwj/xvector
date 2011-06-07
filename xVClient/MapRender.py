@@ -249,6 +249,11 @@ class MapRenderer(object):
         garbage below, it will remain visible through any transparent render.
         This is useful if one layer is being rendered atop another.
         
+        @warning: If alpha is set to any value other than 255 or 0, there will
+        be a massive performance hit.  It is STRONGLY RECOMMENDED that the alpha
+        setting not be used in the client; this feature is mainly provided to
+        give the map editor a nice appearance.
+        
         @raise IndexError: Raised if the supplied source coordinates are out
         of bounds.
         
@@ -280,6 +285,11 @@ class MapRenderer(object):
         @type alpha: integer
         @param alpha: Alpha to blend this layer with (255 = opaque)
         '''
+        # First of all, do we even have to draw this?
+        if alpha == 0:
+            # Totally transparent
+            return
+        
         # Validate parameters
         stlx,stly = source_coords
         if stlx < 0 or stly < 0 or stlx > self.map.width * Maps.TileWidth     \
@@ -294,7 +304,8 @@ class MapRenderer(object):
         painter = QtGui.QPainter()
         painter.begin(surface)
         painter.setPen(QtCore.Qt.NoPen)
-        painter.setOpacity(alpha / 255.0)
+        if alpha != 255:
+            painter.setOpacity(alpha / 255.0)
         
         # Set the clipping rectangle
         targetBaseX, targetBaseY = target_coords
