@@ -19,8 +19,6 @@
 Tool classes (select, draw, flood, etc.), and the undo/redo support classes.
 '''
 
-from xVMapEdit import MapEditor
-
 class ReversibleChange(object):
     '''
     The base class of all modifications which support undo/redo.
@@ -194,7 +192,7 @@ class SelectorTool(Tool):
     def __init__(self):
         '''Initializes the selector tool.'''
         # Inherit any base class behavior
-        super(self,SelectorTool).__init__()
+        super(SelectorTool,self).__init__()
         
         # declare our attributes
         self.current_editor = None
@@ -387,8 +385,7 @@ class Toolbox(dict):
     Manages all of the available tools.
     
     You should not create objects of this yourself; the only instance should
-    exist as a member of the EditorWindow class, and can be accessed from
-    anywhere in the code as C{MapEditor.app.mainwnd.Toolbox}.
+    exist as a member of the MainWindow class.  Access it through that.
     '''
     
     # Tool IDs
@@ -401,10 +398,17 @@ class Toolbox(dict):
     ID_FloodBucket = 4
     '''Button ID of the Flood Bucket tool.'''
     
-    def __init__(self):
+    def __init__(self, parent):
         '''
         Initializes all of the tools.
+        
+        @type parent: xVMapEdit.EditorWindow.MainWindow
+        @param parent: Parent main window which contains the tool selector.
         '''
+        # Declare attributes.
+        self.parent = parent
+        '''Parent main window.'''
+        
         # Yeah... initialize the tools.
         self[self.ID_Selector] = SelectorTool()
         self[self.ID_Pen] = PenTool()
@@ -419,7 +423,7 @@ class Toolbox(dict):
         @raise NoToolException: Raised if a nonexistant tool is selected.
         '''
         # What tool is selected?
-        selected = MapEditor.app.mainwnd.toolToggle.currentTool
+        selected = self.parent.toolToggle.currentTool
         if selected not in self:
             raise NoToolException("Unknown tool selected.")
         return self[selected]

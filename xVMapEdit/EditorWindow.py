@@ -74,7 +74,7 @@ class ResourceToggle(object):
         npc_icon.addPixmap(QtGui.QPixmap(":/ResourceIcons/res/NPCsIcon.png"))
         self.NPCButton.setIcon(npc_icon)
         self.NPCButton.setCheckable(True)
-        self.NPCButton.setToolTip(_("NPCs"))
+        self.NPCButton.setToolTip("NPCs")
         self.ButtonGroup.addButton(self.NPCButton, self.ID_NPCs)
         
         # connect the button signals
@@ -130,28 +130,28 @@ class ToolToggle(object):
         self.SelectorButton.setCheckable(True)
         self.SelectorButton.setToolTip("Selector")
         self.buttonGroup.addButton(self.SelectorButton, 
-                                   EditTools.ToolsManager.ID_Selector)
+                                   EditTools.Toolbox.ID_Selector)
         
         # Pen tool.
         self.PenButton = QtGui.QToolButton()
         self.PenButton.setCheckable(True)
         self.PenButton.setToolTip("Pen")
         self.buttonGroup.addButton(self.PenButton,
-                                   EditTools.ToolsManager.ID_Pen)
+                                   EditTools.Toolbox.ID_Pen)
         
         # Rectangle Draw tool.
         self.RectDrawButton = QtGui.QToolButton()
         self.RectDrawButton.setCheckable(True)
         self.RectDrawButton.setToolTip("Rectangle Draw")
         self.buttonGroup.addButton(self.RectDrawButton,
-                                   EditTools.ToolsManager.ID_RectangleDraw)
+                                   EditTools.Toolbox.ID_RectangleDraw)
         
         # Flood Bucket tool.
         self.FloodButton = QtGui.QToolButton()
         self.FloodButton.setCheckable(True)
         self.FloodButton.setToolTip("Flood Bucket")
         self.buttonGroup.addButton(self.FloodButton,
-                                   EditTools.ToolsManager.ID_FloodBucket)
+                                   EditTools.Toolbox.ID_FloodBucket)
         
         # Select the selector tool by default.
         self.SelectorButton.setChecked(True)
@@ -223,7 +223,7 @@ class MainWindow(QtGui.QMainWindow):
         self.restoggle.Attach(self.ui.toolBar)
         
         # create our toolbox
-        self.Toolbox = EditTools.Toolbox()
+        self.Toolbox = EditTools.Toolbox(self)
         '''The main Toolbox object for the editor.'''
         
         # add the tool toggle

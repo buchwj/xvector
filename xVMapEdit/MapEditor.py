@@ -71,7 +71,7 @@ class MapEditorApp(object):
     """
 
     # constants
-    appname = _("Map Editor")
+    appname = "Map Editor"
     """The application name that is shown in the title bar."""
 
     def __init__(self):
