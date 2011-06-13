@@ -189,6 +189,10 @@ class LayerSelector(QtGui.QWidget):
         self.parent().MapWidget.current_layer = layer
 
 
+class InvalidSelectionException(Exception): pass
+'''Raised if a selection in the map editor is determined to be invalid.'''
+
+
 class EditorWidget(QtGui.QWidget):
     """
     Window class that contains a map.
@@ -290,6 +294,12 @@ class MapEditWidget(QtGui.QWidget):
         '''Last tile that mouse hovered over. Used to check tile changes.'''
         self.usingTool = False
         '''Is the user in the process of using a tool?'''
+        self.hasSelection = False
+        '''Is anything selected?'''
+        self.selectionStartCoords = (0,0)
+        '''Tile coordinates of the upper-left corner of the selection.'''
+        self.selectionEndCoords = (0,0)
+        '''Tile coordinates of the bottom-right corner of the selection.'''
 
         self.map = map
         
@@ -352,6 +362,55 @@ class MapEditWidget(QtGui.QWidget):
             # go ahead and render the layer
             self.renderer.RenderLayer(self, targetCoords, sourceCoords, (0,0),
                                       width, height, z, alpha)
+        
+        # do we need to draw the selection border?
+        if self.hasSelection:
+            # yes, draw it
+            self._DrawSelectionBorder()
+    
+    def _DrawSelectionBorder(self):
+        '''
+        Draws the selection border around the selected area.
+        
+        @raise InvalidSelectionException: Raised if the selection is invalid.
+        '''
+        # verify that the selection is valid
+        startX, startY = self.selectionStartCoords
+        endX, endY = self.selectionEndCoords
+        if startX < 0 or startY < 0 or endX < 0 or endY < 0 or \
+            startX >= self.map.width or startY >= self.map.height or \
+            endX >= self.map.width or endY >= self.map.height:
+            # invalid tile coordinates
+            raise InvalidSelectionException("Coordinates out of bounds.")
+        
+        # now check that the selection is top-left and bottom-right corners
+        if startX > endX or startY > endY:
+            # invalid selection specification
+            raise InvalidSelectionException("Corner ordering is invalid.")
+        
+        # figure out what we're drawing
+        pix_startX = startX * Maps.TileWidth
+        pix_startY = startY * Maps.TileHeight
+        pix_endX = endX * Maps.TileWidth
+        pix_endY = endY * Maps.TileHeight
+        pix_endX, pix_endY = MapRender.GetTileBR(pix_endX, pix_endY)
+        width = pix_endX - pix_startX
+        height = pix_endY - pix_startY
+        
+        # grab a painter and set it up
+        painter = QtGui.QPainter()
+        painter.begin(self)
+        painter.setBrush(QtCore.Qt.NoBrush)
+        pen = QtGui.QPen(QtCore.Qt.white)
+        pen.setWidth(2)
+        painter.setPen(pen)
+        
+        # draw our selection
+        targetRect = QtCore.QRect(pix_startX, pix_startY, width, height)
+        painter.drawRect(targetRect)
+        
+        # finish up
+        painter.end()
     
     def sizeHint(self):
         """
@@ -437,3 +496,23 @@ class MapEditWidget(QtGui.QWidget):
         
         # Let the widget do its usual thing with the mouse.
         super(MapEditWidget,self).mousePressEvent(event)
+    
+    @property
+    def selection(self):
+        '''
+        Allows setting and getting the selection as a tuple pair of the form
+        ((x1,y1),(x2,y2)).  Returns None if there is no selection, and will
+        deselect the current selection if set to None.
+        ''' 
+        if not self.hasSelection:
+            return None
+        return (self.selectionStartCoords, self.selectionEndCoords)
+    
+    @selection.setter
+    def selection(self, newsel):
+        if newsel == None:
+            self.hasSelection = False
+            return
+        self.selectionStartCoords = newsel[0]
+        self.selectionEndCoords = newsel[1]
+        self.hasSelection = True

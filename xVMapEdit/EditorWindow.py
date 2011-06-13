@@ -57,7 +57,7 @@ class ResourceToggle(object):
         self.TileButton.setIcon(tile_icon)
         self.TileButton.setCheckable(True)
         self.TileButton.setChecked(True)
-        self.TileButton.setToolTip(_("Tiles"))
+        self.TileButton.setToolTip("Tiles")
         self.ButtonGroup.addButton(self.TileButton, self.ID_Tiles)
         
         self.ItemButton = QtGui.QToolButton()
@@ -65,7 +65,7 @@ class ResourceToggle(object):
         item_icon.addPixmap(QtGui.QPixmap(":/ResourceIcons/res/ItemsIcon.png"))
         self.ItemButton.setIcon(item_icon)
         self.ItemButton.setCheckable(True)
-        self.ItemButton.setToolTip(_("Items"))
+        self.ItemButton.setToolTip("Items")
         self.ButtonGroup.addButton(self.ItemButton, self.ID_Items)
         
         self.NPCButton = QtGui.QToolButton()
@@ -110,6 +110,70 @@ class ResourceToggle(object):
             print "[error] unrecognized resource view", id, "selected"
 
 
+class ToolToggle(object):
+    '''
+    Contains a set of toggle buttons which are used to choose which tool to
+    use on the map.
+    '''
+    
+    # A few constants...
+    ID_Selector = 1
+    '''Button ID of the Selector tool.'''
+    ID_Pen = 2
+    '''Button ID of the Pen tool.'''
+    ID_RectangleDraw = 3
+    '''Button ID of the Rectangle Draw tool.'''
+    ID_FloodBucket = 4
+    '''Button ID of the Flood Bucket tool.'''
+    
+    def __init__(self):
+        '''
+        Initializes a new tool toggle widget.
+        '''
+        # Set up the main button group.
+        self.buttonGroup = QtGui.QButtonGroup()
+        self.buttonGroup.setExclusive(True)
+        
+        # Selector tool.
+        self.SelectorButton = QtGui.QToolButton()
+        self.SelectorButton.setCheckable(True)
+        self.SelectorButton.setToolTip("Selector")
+        self.buttonGroup.addButton(self.SelectorButton, self.ID_Selector)
+        
+        # Pen tool.
+        self.PenButton = QtGui.QToolButton()
+        self.PenButton.setCheckable(True)
+        self.PenButton.setToolTip("Pen")
+        self.buttonGroup.addButton(self.PenButton, self.ID_Pen)
+        
+        # Rectangle Draw tool.
+        self.RectDrawButton = QtGui.QToolButton()
+        self.RectDrawButton.setCheckable(True)
+        self.RectDrawButton.setToolTip("Rectangle Draw")
+        self.buttonGroup.addButton(self.RectDrawButton, self.ID_RectangleDraw)
+        
+        # Flood Bucket tool.
+        self.FloodButton = QtGui.QToolButton()
+        self.FloodButton.setCheckable(True)
+        self.FloodButton.setToolTip("Flood Bucket")
+        self.buttonGroup.addButton(self.FloodButton, self.ID_FloodBucket)
+        
+        # Select the selector tool by default.
+        self.SelectorButton.setChecked(True)
+    
+    def Attach(self, toolbar):
+        '''
+        Attaches the buttons to a toolbar.
+        
+        @type toolbar: C{QtGui.QToolBar}
+        @param toolbar: Toolbar to attach buttons to.
+        '''
+        toolbar.addWidget(self.SelectorButton)
+        toolbar.addWidget(self.PenButton)
+        toolbar.addWidget(self.RectDrawButton)
+        toolbar.addWidget(self.FloodButton)
+    
+
 class MainWindow(QtGui.QMainWindow):
     """
     Main window class for the map editor.
@@ -147,6 +211,11 @@ class MainWindow(QtGui.QMainWindow):
         # add the resource toggle
         self.restoggle = ResourceToggle(self)
         self.restoggle.Attach(self.ui.toolBar)
+        
+        # add the tool toggle
+        self.ui.toolBar.addSeparator()
+        self.toolToggle = ToolToggle()
+        self.toolToggle.Attach(self.ui.toolBar)
         
         # configure the MDI area
 

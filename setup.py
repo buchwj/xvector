@@ -38,15 +38,6 @@ else:
     print "You are about to see a warning about 'windows'."
     print "Please ignore this unless you want to build an EXE."
 
-# i18n support
-try:
-    from babel.messages import frontend as babel
-    use_babel = True
-except ImportError:
-    print "warning: babel not found. i18n development is disabled."
-    print "(if you aren't a developer, you can ignore this)"
-    use_babel = False
-
 # okay, we're going to enumerate our resource directories now.
 import re
 
@@ -62,12 +53,6 @@ spritefiles = filter(matcherSPRITE, spritefiles_potential)
 spritefiles_final = [os.path.join(spritedir, s) for s in spritefiles]
 resources.append(('sprites', spritefiles_final))
 
-# and finally, we invoke distutils
-if use_babel:
-    cmdclass = {'compile_catalog': babel.compile_catalog,
-                'extract_messages': babel.extract_messages,
-                'init_catalog': babel.init_catalog,
-                'update_catalog': babel.update_catalog}
 else:
     cmdclass = {}
 
