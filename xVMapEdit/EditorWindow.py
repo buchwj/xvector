@@ -21,6 +21,7 @@ Contains the main window class for the map editor.
 
 from PyQt4 import QtCore, QtGui
 from xVMapEdit import MapEditorUI, MapEditorAboutUI, TileChooser, MapWindow
+from xVMapEdit import EditTools
 from xVClient import Sprite
 
 class ResourceToggle(object):
@@ -116,16 +117,6 @@ class ToolToggle(object):
     use on the map.
     '''
     
-    # A few constants...
-    ID_Selector = 1
-    '''Button ID of the Selector tool.'''
-    ID_Pen = 2
-    '''Button ID of the Pen tool.'''
-    ID_RectangleDraw = 3
-    '''Button ID of the Rectangle Draw tool.'''
-    ID_FloodBucket = 4
-    '''Button ID of the Flood Bucket tool.'''
-    
     def __init__(self):
         '''
         Initializes a new tool toggle widget.
@@ -138,25 +129,29 @@ class ToolToggle(object):
         self.SelectorButton = QtGui.QToolButton()
         self.SelectorButton.setCheckable(True)
         self.SelectorButton.setToolTip("Selector")
-        self.buttonGroup.addButton(self.SelectorButton, self.ID_Selector)
+        self.buttonGroup.addButton(self.SelectorButton, 
+                                   EditTools.ToolsManager.ID_Selector)
         
         # Pen tool.
         self.PenButton = QtGui.QToolButton()
         self.PenButton.setCheckable(True)
         self.PenButton.setToolTip("Pen")
-        self.buttonGroup.addButton(self.PenButton, self.ID_Pen)
+        self.buttonGroup.addButton(self.PenButton,
+                                   EditTools.ToolsManager.ID_Pen)
         
         # Rectangle Draw tool.
         self.RectDrawButton = QtGui.QToolButton()
         self.RectDrawButton.setCheckable(True)
         self.RectDrawButton.setToolTip("Rectangle Draw")
-        self.buttonGroup.addButton(self.RectDrawButton, self.ID_RectangleDraw)
+        self.buttonGroup.addButton(self.RectDrawButton,
+                                   EditTools.ToolsManager.ID_RectangleDraw)
         
         # Flood Bucket tool.
         self.FloodButton = QtGui.QToolButton()
         self.FloodButton.setCheckable(True)
         self.FloodButton.setToolTip("Flood Bucket")
-        self.buttonGroup.addButton(self.FloodButton, self.ID_FloodBucket)
+        self.buttonGroup.addButton(self.FloodButton,
+                                   EditTools.ToolsManager.ID_FloodBucket)
         
         # Select the selector tool by default.
         self.SelectorButton.setChecked(True)
@@ -172,7 +167,21 @@ class ToolToggle(object):
         toolbar.addWidget(self.PenButton)
         toolbar.addWidget(self.RectDrawButton)
         toolbar.addWidget(self.FloodButton)
-    
+        
+    @property
+    def currentTool(self):
+        '''
+        Property method for getting and setting the currently selected tool.
+        '''
+        return self.buttonGroup.checkedId()
+
+    @currentTool.setter
+    def currentTool(self, tool):
+        button = self.buttonGroup.button(tool)
+        if not button:
+            raise IndexError("Requested tool does not exist.")
+        button.setChecked(True)
+
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -210,14 +219,18 @@ class MainWindow(QtGui.QMainWindow):
         
         # add the resource toggle
         self.restoggle = ResourceToggle(self)
+        '''The resource toggle buttons.'''
         self.restoggle.Attach(self.ui.toolBar)
+        
+        # create our toolbox
+        self.Toolbox = EditTools.Toolbox()
+        '''The main Toolbox object for the editor.'''
         
         # add the tool toggle
         self.ui.toolBar.addSeparator()
         self.toolToggle = ToolToggle()
+        '''The toggle buttons for each of the different tools.'''
         self.toolToggle.Attach(self.ui.toolBar)
-        
-        # configure the MDI area
 
         # hook the menu signals to the appropriate slots
         self.connect(self.ui.action_New, QtCore.SIGNAL("triggered()"),

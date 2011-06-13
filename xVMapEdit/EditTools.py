@@ -19,6 +19,8 @@
 Tool classes (select, draw, flood, etc.), and the undo/redo support classes.
 '''
 
+from xVMapEdit import MapEditor
+
 class ReversibleChange(object):
     '''
     The base class of all modifications which support undo/redo.
@@ -370,3 +372,54 @@ class FloodTool(Tool):
     Tool subclass for the Flood Bucket tool.
     '''
     pass    # TODO: Implement
+
+
+###############################################################################
+########################## End Tools / Begin Toolbox ##########################
+###############################################################################
+
+class NoToolException(Exception): pass
+'''Raised when a nonexistant tool is referenced.'''
+
+
+class Toolbox(dict):
+    '''
+    Manages all of the available tools.
+    
+    You should not create objects of this yourself; the only instance should
+    exist as a member of the EditorWindow class, and can be accessed from
+    anywhere in the code as C{MapEditor.app.mainwnd.Toolbox}.
+    '''
+    
+    # Tool IDs
+    ID_Selector = 1
+    '''Button ID of the Selector tool.'''
+    ID_Pen = 2
+    '''Button ID of the Pen tool.'''
+    ID_RectangleDraw = 3
+    '''Button ID of the Rectangle Draw tool.'''
+    ID_FloodBucket = 4
+    '''Button ID of the Flood Bucket tool.'''
+    
+    def __init__(self):
+        '''
+        Initializes all of the tools.
+        '''
+        # Yeah... initialize the tools.
+        self[self.ID_Selector] = SelectorTool()
+        self[self.ID_Pen] = PenTool()
+        self[self.ID_RectangleDraw] = RectangleDrawTool()
+        self[self.ID_FloodBucket] = FloodTool()
+    
+    @property
+    def CurrentTool(self):
+        '''
+        Property that allows quick access to the selected tool.
+        
+        @raise NoToolException: Raised if a nonexistant tool is selected.
+        '''
+        # What tool is selected?
+        selected = MapEditor.app.mainwnd.toolToggle.currentTool
+        if selected not in self:
+            raise NoToolException("Unknown tool selected.")
+        return self[selected]

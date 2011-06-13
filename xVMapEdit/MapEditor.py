@@ -37,9 +37,6 @@ import os
 import sys
 import time
 
-# i18n constants
-I18N_DOMAIN = "xVMapEdit"
-
 if __name__ == "__main__":
     # Try to home in on the client.
     if os.path.exists('sprites'):
@@ -62,9 +59,6 @@ if __name__ == "__main__":
     sys.path.append("../")  # TODO: Make this dynamic so it can find where the
                             # client is installed (eg. using registry on
                             # Windows, etc.)
-    # Set up internationalization support
-    import gettext
-    gettext.install(I18N_DOMAIN, "locales/")
 
 
 from xVMapEdit import EditorWindow
