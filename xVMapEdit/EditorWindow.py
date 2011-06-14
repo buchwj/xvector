@@ -21,7 +21,7 @@ Contains the main window class for the map editor.
 
 from PyQt4 import QtCore, QtGui
 from xVMapEdit import MapEditorUI, MapEditorAboutUI, TileChooser, MapWindow
-from xVMapEdit import EditTools
+from xVMapEdit import EditTools, EditorGlobals
 from xVClient import Sprite
 
 class ResourceToggle(object):
@@ -38,15 +38,14 @@ class ResourceToggle(object):
     ID_NPCs = 3
     """Button ID of the NPCs button"""
     
-    def __init__(self, window):
+    def __init__(self):
         """
         Initializes a new set of toggle controls for the resources.
-        
-        @type window: C{QtGui.QMainWindow}
-        @param window: Main window of the map editor
         """
         # set up the basics
-        self.MainWindow = window
+        mainApp = EditorGlobals.MainApp
+        print "[debug]", mainApp
+        self.MainWindow = mainApp.mainwnd
         
         # create our buttons
         self.ButtonGroup = QtGui.QButtonGroup()
@@ -198,10 +197,30 @@ class MainWindow(QtGui.QMainWindow):
         """
         # initialize the object as a standard main window
         super(MainWindow, self).__init__(parent)
-
-        # okay, now create the UI object and map it to the window
+        
+        # declare our attributes
+        self.ui = None
+        '''The Qt 4 user interface object.'''
+        self.restoggle = None
+        '''The resource toggle buttons.'''
+        self.Toolbox = None
+        '''The main Toolbox object for the editor.'''
+        self.toolToggle = None
+        '''The toggle buttons for each of the different tools.'''
+        self.choosermodels = {}
+        '''Sprite chooser models.'''
+        self.chooserviews = {}
+        '''Sprite chooser views.'''
+    
+    def SetupWindow(self):
+        '''
+        Sets up the window UI.
+        
+        We keep this separate from __init__ since certain parts (the Toolbox)
+        need the EditorWindow object to fully exist.
+        '''
+        # create the UI object and map it to the window
         self.ui = MapEditorUI.Ui_MapEditorWindow()
-        """The Qt 4 user interface object."""
         self.ui.setupUi(self)
         
         # next, set up the main toolbar
@@ -218,18 +237,15 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.toolBar.addSeparator()
         
         # add the resource toggle
-        self.restoggle = ResourceToggle(self)
-        '''The resource toggle buttons.'''
+        self.restoggle = ResourceToggle()
         self.restoggle.Attach(self.ui.toolBar)
         
         # create our toolbox
-        self.Toolbox = EditTools.Toolbox(self)
-        '''The main Toolbox object for the editor.'''
+        self.Toolbox = EditTools.Toolbox()
         
         # add the tool toggle
         self.ui.toolBar.addSeparator()
         self.toolToggle = ToolToggle()
-        '''The toggle buttons for each of the different tools.'''
         self.toolToggle.Attach(self.ui.toolBar)
 
         # hook the menu signals to the appropriate slots
@@ -261,10 +277,6 @@ class MainWindow(QtGui.QMainWindow):
                      self.OnHelpContents)
         self.connect(self.ui.action_About, QtCore.SIGNAL("triggered()"),
                      self.OnHelpAbout)
-
-        # create the tile choosers
-        self.choosermodels = {}
-        self.chooserviews = {}
 
         # first up, the basic tilesets
         tileset = Sprite.GetSpriteSet("tiles")

@@ -38,7 +38,10 @@ class NewMapDialog(QtGui.QDialog):
         
         @type parent: C{QtGui.QWidget}
         @param parent: Parent object of this dialog (usually the main window).
-        This dialog MUST have a parent (and it MUST act like EditorWindow)!
+        This dialog MUST have a parent (and it MUST act like MainWindow)!
+        
+        @type mainwnd: xVMapEdit.EditorWindow.MainWindow
+        @param mainwnd: The actual main window object.
         
         @raise ValueError
         Raised if an invalid parent is specified.
@@ -208,6 +211,12 @@ class EditorWidget(QtGui.QWidget):
 
         @type parent: QtGui.QWidget
         @param parent: Parent GUI object (should be the MDI area)
+        
+        @type map: xVLib.Maps.Map
+        @param map: Map to edit with this, if one already exists.
+        
+        @type mainwnd: xVMapEdit.EditorWindow.MainWindow
+        @param mainwnd: Handle to the MainWindow object.
         """
         # call the parent initializer
         super(EditorWidget, self).__init__(parent)

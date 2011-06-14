@@ -19,6 +19,8 @@
 Tool classes (select, draw, flood, etc.), and the undo/redo support classes.
 '''
 
+from xVMapEdit import EditorGlobals
+
 class ReversibleChange(object):
     '''
     The base class of all modifications which support undo/redo.
@@ -398,16 +400,14 @@ class Toolbox(dict):
     ID_FloodBucket = 4
     '''Button ID of the Flood Bucket tool.'''
     
-    def __init__(self, parent):
+    def __init__(self):
         '''
         Initializes all of the tools.
-        
-        @type parent: xVMapEdit.EditorWindow.MainWindow
-        @param parent: Parent main window which contains the tool selector.
         '''
-        # Declare attributes.
-        self.parent = parent
-        '''Parent main window.'''
+        # Declare attributes
+        mainApp = EditorGlobals.MainApp
+        self.MainWindow = mainApp.mainwnd
+        '''Handle to the main window of the editor.'''
         
         # Yeah... initialize the tools.
         self[self.ID_Selector] = SelectorTool()
@@ -423,7 +423,7 @@ class Toolbox(dict):
         @raise NoToolException: Raised if a nonexistant tool is selected.
         '''
         # What tool is selected?
-        selected = self.parent.toolToggle.currentTool
+        selected = self.MainWindow.toolToggle.currentTool
         if selected not in self:
             raise NoToolException("Unknown tool selected.")
         return self[selected]

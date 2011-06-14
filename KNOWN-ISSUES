@@ -45,5 +45,10 @@ I. Minor graphical glitches in the map editor for some Linux installations
 	  be) appears to be selected.  This issue could not be reproduced on the
 	  Windows platform.
 	* This appeared to be an intermittent problem caused by underlying bugs
-	  in the display system.  The problem can be resolved simply by restarting
-	  the display manager or computer.
+	  in the display system.  More specifically, it was only observed when
+	  using the Compiz window manager, version 0.8.6. The problem can be 
+	  resolved simply by restarting the display manager or computer.
+		* Another solution if you're using the Compiz window manager is to
+		  briefly switch to another window manager (e.g. Metacity) and then
+		  back; this is easy if the Compiz icon is on your screen, just right-
+		  click and use the "Select Window Manager" menu.

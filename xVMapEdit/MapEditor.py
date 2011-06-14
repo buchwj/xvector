@@ -61,7 +61,7 @@ if __name__ == "__main__":
                             # Windows, etc.)
 
 
-from xVMapEdit import EditorWindow
+from xVMapEdit import EditorWindow, EditorGlobals
 from xVClient import Sprite, ErrorReporting
 
 
@@ -117,6 +117,7 @@ class MapEditorApp(object):
 
         # and here we go! show the main window!
         self.mainwnd = EditorWindow.MainWindow()
+        self.mainwnd.SetupWindow()
         self.mainwnd.show()
         self.animtimer.start(25)
 
@@ -141,12 +142,10 @@ class MapEditorApp(object):
             spriteset.PumpAnimation(curtick)
 
 
-app = None
-'''Main application object.'''
-
 if __name__ == "__main__":
     # Run the application.
     print "Starting map editor..."
     app = MapEditorApp()
+    EditorGlobals.MainApp = app
     retcode = app.Main()
     sys.exit(retcode)
