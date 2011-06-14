@@ -44,7 +44,6 @@ class ResourceToggle(object):
         """
         # set up the basics
         mainApp = EditorGlobals.MainApp
-        print "[debug]", mainApp
         self.MainWindow = mainApp.mainwnd
         
         # create our buttons
@@ -380,6 +379,15 @@ class MainWindow(QtGui.QMainWindow):
         # launch the about dialog
         dlg = AboutDialog(self)
         dlg.show()
+    
+    def OnMenuWindow(self):
+        '''
+        Called right before the Window menu is displayed.
+        
+        We use this to display the list of MDI subwindows to the user.
+        '''
+        # Destroy whatever we already have in the Window menu.
+        pass    # TODO: Implement
 
 class AboutDialog(QtGui.QDialog):
     """

@@ -20,6 +20,7 @@ Tool classes (select, draw, flood, etc.), and the undo/redo support classes.
 '''
 
 from xVMapEdit import EditorGlobals
+from PyQt4 import QtCore, QtGui
 
 class ReversibleChange(object):
     '''
@@ -156,7 +157,7 @@ class SelectorChange(ReversibleChange):
         @param editor: Editor to which this operation was applied.
         '''
         # Inherit any base class behavior
-        super(self,SelectorChange).__init__(editor)
+        super(SelectorChange,self).__init__(editor)
         
         # Declare our attributes.
         self.previous_selection = None
@@ -173,7 +174,7 @@ class SelectorChange(ReversibleChange):
     def UndoChange(self):
         '''Reverts the selection.'''
         # Inherit any base class behavior
-        super(self,SelectorChange).UndoChange()
+        super(SelectorChange,self).UndoChange()
         
         # Undo selection.
         self.editor.MapWidget.selection = self.previous_selection
@@ -181,7 +182,7 @@ class SelectorChange(ReversibleChange):
     def RedoChange(self):
         '''Repeats the selection.'''
         # Inherit any base class behavior
-        super(self,SelectorChange).RedoChange()
+        super(SelectorChange,self).RedoChange()
         
         # Redo selection.
         self.editor.MapWidget.selection = self.new_selection
@@ -217,7 +218,7 @@ class SelectorTool(Tool):
         @param startTileCoords: Tile coordinates of the first point.
         '''
         # Inherit any base class behavior
-        super(self,SelectorTool).BeginOperation(editor, startTileCoords)
+        super(SelectorTool,self).BeginOperation(editor, startTileCoords)
         
         # Update arguments
         self.current_editor = editor
@@ -240,7 +241,7 @@ class SelectorTool(Tool):
         @param nextTileCoords: Tile coordinates of the next point.
         '''
         # Inherit any base class behavior
-        super(self,SelectorTool).ContinueOperation(nextTileCoords)
+        super(SelectorTool,self).ContinueOperation(nextTileCoords)
         
         # Check if an operation is in progress
         if not self.current_editor:
@@ -260,7 +261,7 @@ class SelectorTool(Tool):
         @return: A SelectorChange object for the ended operation.
         '''
         # Inherit any base class behavior
-        super(self,SelectorTool).EndOperation()
+        super(SelectorTool,self).EndOperation()
         
         # Check if an operation is in progress
         if not self.current_editor:
@@ -427,3 +428,29 @@ class Toolbox(dict):
         if selected not in self:
             raise NoToolException("Unknown tool selected.")
         return self[selected]
+    
+    @property
+    def CurrentCursor(self):
+        '''
+        Property that allows quick access to the cursor for the selected tool.
+        
+        If a cursor specific to the tool is not found, the arrow cursor will
+        be used by default.
+        '''
+        # What tool is selected?
+        selected = self.MainWindow.toolToggle.currentTool
+        if selected == self.ID_Selector:
+            # Selector tool uses a standard arrow cursor
+            return QtGui.QCursor(QtCore.Qt.ArrowCursor)
+        elif selected == self.ID_Pen:
+            # Pen tool uses the pen cursor
+            pass    # TODO: Implement
+        elif selected == self.ID_RectangleDraw:
+            # Rectangle draw tool uses the rectangle draw cursor
+            pass    # TODO: Implement
+        elif selected == self.ID_FloodBucket:
+            # Flood bucket tool uses the flood bucket cursor
+            pass    # TODO: Implement
+        
+        # If we get here, no cursor is known.  Default to the arrow cursor.
+        return QtGui.QCursor(QtCore.Qt.ArrowCursor)

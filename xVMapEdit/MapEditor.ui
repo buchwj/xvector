@@ -59,7 +59,7 @@
          <x>0</x>
          <y>0</y>
          <width>160</width>
-         <height>542</height>
+         <height>538</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -107,7 +107,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>25</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -145,7 +145,11 @@
     <property name="title">
      <string>&amp;Window</string>
     </property>
-    <addaction name="actionNone"/>
+    <addaction name="action_Next_Window"/>
+    <addaction name="action_Previous_Window"/>
+    <addaction name="action_Tile_Windows"/>
+    <addaction name="action_Cascade_Windows"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuMap">
     <property name="title">
@@ -322,6 +326,26 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Y</string>
+   </property>
+  </action>
+  <action name="action_Next_Window">
+   <property name="text">
+    <string>&amp;Next Window</string>
+   </property>
+  </action>
+  <action name="action_Previous_Window">
+   <property name="text">
+    <string>&amp;Previous Window</string>
+   </property>
+  </action>
+  <action name="action_Tile_Windows">
+   <property name="text">
+    <string>&amp;Tile Windows</string>
+   </property>
+  </action>
+  <action name="action_Cascade_Windows">
+   <property name="text">
+    <string>&amp;Cascade Windows</string>
    </property>
   </action>
  </widget>

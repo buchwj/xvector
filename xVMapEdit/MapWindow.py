@@ -22,7 +22,7 @@ Contains code for displaying and editing a map within the editor.
 from xVLib import Maps
 from xVClient import MapRender, ErrorReporting
 from PyQt4 import QtCore, QtGui
-from xVMapEdit import NewMapDialogUI
+from xVMapEdit import NewMapDialogUI, EditorGlobals
 
 class NewMapDialog(QtGui.QDialog):
     """
@@ -220,6 +220,15 @@ class EditorWidget(QtGui.QWidget):
         """
         # call the parent initializer
         super(EditorWidget, self).__init__(parent)
+        
+        # declare attributes
+        MainApp = EditorGlobals.MainApp
+        self.MainWindow = MainApp.mainwnd
+        '''Handle to the main window of the editor.'''
+        self.UndoStack = []
+        '''A stack containing previous (undoable) operations.'''
+        self.RedoStack = []
+        '''A stack containing the next (redoable) operations.'''
 
         # create the layout
         self.Layout = QtGui.QVBoxLayout()
@@ -266,6 +275,122 @@ class EditorWidget(QtGui.QWidget):
         
         # fix the tab order
         self.setTabOrder(self.ScrollArea, self.LayerSel)
+    
+    def PushUndoOperation(self, change):
+        '''
+        Pushes an operation onto the undo stack.
+        
+        Note that this will not inherently clear the redo stack.  This is
+        because in the case that an action is redone, it will be pushed onto
+        the undo stack, but any future redo actions must still remain on the
+        redo stack.
+        
+        @type change: xVMapEdit.EditTools.ReversibleChange
+        @param change: Operation to push onto the undo stack.
+        '''
+        # push
+        self.UndoStack.append(change)
+        
+        # update
+        self._UpdateUndoRedoButtons()
+    
+    def PopUndoOperation(self):
+        '''
+        Pops an operation off of the undo stack.
+        
+        Note that this will not inherently push the operation onto the redo
+        stack.  You must do this yourself if you want the operation to be
+        redoable.
+        
+        @return: The top operation from the undo stack.
+        '''
+        # pop
+        popped = self.UndoStack.pop()
+        
+        # update
+        self._UpdateUndoRedoButtons()
+        
+        # finish
+        return popped
+    
+    def ClearUndoStack(self):
+        '''
+        Clears the undo stack.
+        '''
+        self.UndoStack = []
+        self._UpdateUndoRedoButtons()
+    
+    def PushRedoOperation(self, change):
+        '''
+        Pushes an operation onto the redo stack.
+        
+        @type change: xVMapEdit.EditTools.ReversibleChange
+        @param change: Operation to push onto the redo stack.
+        '''
+        self.RedoStack.append(change)
+        self._UpdateUndoRedoButtons()
+    
+    def PopRedoOperation(self):
+        '''
+        Pops an operation off of the redo stack.
+        
+        Note that this will not inherently push the operation onto the undo
+        stack.  You must do this yourself if you want the operation to be
+        undoable.
+        
+        @return: The top operation from the redo stack.
+        '''
+        popped = self.RedoStack.pop()
+        self._UpdateUndoRedoButtons()
+        return popped
+    
+    def ClearRedoStack(self):
+        '''
+        Clears the redo stack.
+        '''
+        self.RedoStack = []
+        self._UpdateUndoRedoButtons()
+        
+    def _UpdateUndoRedoButtons(self):
+        '''
+        Enables or disables the Undo and Redo buttons as necessary.
+        '''
+        # what can we do?
+        canUndo = len(self.UndoStack) > 0
+        canRedo = len(self.RedoStack) > 0
+        
+        # update buttons
+        self.MainWindow.ui.action_Undo.setEnabled(canUndo)
+        self.MainWindow.ui.action_Redo.setEnabled(canRedo)
+    
+    def focusInEvent(self, event):
+        '''
+        Called when this window gains focus.
+        
+        This is a reimplemented method from Qt 4.  We use it to ensure that
+        the undo and redo buttons are properly updated for this window's map
+        when it gains focus.
+        
+        @type event: C{QtGui.QFocusEvent}
+        @param event: Focus event from Qt 4.
+        '''
+        # Update the undo/redo buttons.
+        self._UpdateUndoRedoButtons()
+        
+        # Let the window do its usual thing.
+        super(self,EditorWidget).focusInEvent(event)
+        
+    @property
+    def selection(self):
+        '''
+        Property abstraction that allows reference to the selection at the
+        editor window level.
+        '''
+        return self.MapWidget.selection
+    
+    @selection.setter
+    def selection(self, select):
+        self.MapWidget.selection = select
 
 
 class MapEditWidget(QtGui.QWidget):
@@ -294,6 +419,11 @@ class MapEditWidget(QtGui.QWidget):
         super(QtGui.QWidget, self).__init__(parent)
 
         # set up some attributes
+        mainApp = EditorGlobals.MainApp
+        self.MainWindow = mainApp.mainwnd
+        '''Handle to the main editor window.'''
+        self.EditorWindow = self.parent().parent()
+        '''Handle to the editor sub-window for this map.'''
         self._map = None
         """Internal handle to the map; access this via object.map instead."""
         self.sbar = statusbar
@@ -413,7 +543,7 @@ class MapEditWidget(QtGui.QWidget):
         painter = QtGui.QPainter()
         painter.begin(self)
         painter.setBrush(QtCore.Qt.NoBrush)
-        pen = QtGui.QPen(QtCore.Qt.white)
+        pen = QtGui.QPen(QtCore.Qt.red)
         pen.setWidth(2)
         painter.setPen(pen)
         
@@ -424,6 +554,50 @@ class MapEditWidget(QtGui.QWidget):
         # finish up
         painter.end()
     
+    def _RedrawTileSection(self, startCoords, endCoords, border=0):
+        '''
+        Redraws the requested tiles of the map.
+        
+        @type startCoords: integer tuple
+        @param startCoords: Coordinates of the starting tile.
+        
+        @type endCoords: integer tuple
+        @param endCoords: Coordinates of the ending tile.
+        
+        @type border: integer
+        @param border: Width of the border along the edge to redraw.
+        
+        @raise IndexError: Raised if the coordinates are out of bounds.
+        '''
+        # Validate parameters
+        tStartX, tStartY = startCoords
+        tEndX, tEndY = endCoords
+        if tStartX < 0 or tStartY < 0 or tEndX < 0 or tEndY < 0:
+            # out of bounds
+            raise IndexError("Selection coordinates must be positive.")
+        if tStartX >= self.map.width or tEndX >= self.map.width:
+            # out of bounds
+            raise IndexError("Selection coordinates out of bounds.")
+        if tStartY >= self.map.height or tEndY >= self.map.height:
+            # out of bounds
+            raise IndexError("Selection coordinates out of bounds.")
+        
+        # Figure out what we're drawing
+        tULX = min(tStartX, tEndX)
+        tULY = min(tStartY, tEndY)
+        tBRX = max(tStartX, tEndX)
+        tBRY = max(tStartY, tEndY)
+        pStartX = tULX * Maps.TileWidth - border
+        pStartY = tULY * Maps.TileHeight - border
+        pEndX = tBRX * Maps.TileWidth
+        pEndY = tBRY * Maps.TileHeight
+        pEndX, pEndY = MapRender.GetTileBR(pEndX, pEndY)
+        width = pEndX - pStartX + border
+        height = pEndY - pStartY + border
+        
+        # Redraw
+        self.update(pStartX, pStartY, width, height)
+        
     def sizeHint(self):
         """
         Calculates the size of the full widget.
@@ -475,7 +649,14 @@ class MapEditWidget(QtGui.QWidget):
                 # But hold on.  Are we even using a tool?
                 if self.usingTool:
                     # Alright, go ahead and use the tool.
-                    pass    # TODO: Implement
+                    try:
+                        currentTool = self.MainWindow.Toolbox.CurrentTool
+                        currentTool.ContinueOperation(curtile)
+                    except:
+                        # report the error
+                        message = "Error while continuing the tool operation."
+                        ErrorReporting.ShowException(start_msg=message, 
+                                                     parent=self.MainWindow)
         
         # Processing complete, update the previous tile tracker
         if tileChanged:
@@ -501,13 +682,65 @@ class MapEditWidget(QtGui.QWidget):
             x = point.x()
             y = point.y()
             curtile = self.renderer.GetTileMajorXY(x, y)
-            tileX, tileY = curtile
             
             # Start using the tool.
-            # TODO: Implement
+            try:
+                currentTool = self.MainWindow.Toolbox.CurrentTool
+                currentTool.BeginOperation(self.EditorWindow, curtile)
+                self.usingTool = True
+            except:
+                # Report the error.
+                message = "Error while beginning the tool operation."
+                ErrorReporting.ShowException(start_msg=message,
+                                             parent=self.MainWindow)
         
         # Let the widget do its usual thing with the mouse.
         super(MapEditWidget,self).mousePressEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        '''
+        Called when a mouse button is released.
+        
+        This is a reimplemented function from Qt 4's QWidget class.
+        We use it to finish using tools when the user releases the mouse.
+        
+        @type event: C{QtGui.QMouseEvent}
+        @param event: Mouse press event from Qt
+        '''
+        # Was the released button the left button?
+        if event.button() == QtCore.Qt.LeftButton:
+            try:
+                # Finish using the tool.
+                currentTool = self.MainWindow.Toolbox.CurrentTool
+                change = currentTool.EndOperation()
+                self.usingTool = False
+                
+                # Push the operation onto the undo stack, clear the redo stack.
+                self.EditorWindow.PushUndoOperation(change)
+                self.EditorWindow.ClearRedoStack()
+                
+            except:
+                # Report the error.
+                message = "Error while ending the tool operation."
+                ErrorReporting.ShowException(start_msg=message,
+                                             parent=self.MainWindow)
+        
+        # Let the widget do its usual thing with the mouse.
+        super(MapEditWidget,self).mouseReleaseEvent(event)
+    
+    def enterEvent(self, event):
+        '''
+        Called when the mouse enters the widget.
+        
+        This is a reimplemented function from Qt 4's QWidget class.
+        We use it to set the correct cursor for the tool being used.
+        
+        @type event: C{QtCore.QEvent}
+        @param event: Enter event from Qt
+        '''
+        # Grab the correct cursor
+        cursor = self.MainWindow.Toolbox.CurrentCursor
+        self.setCursor(cursor)
     
     @property
     def selection(self):
@@ -522,9 +755,25 @@ class MapEditWidget(QtGui.QWidget):
     
     @selection.setter
     def selection(self, newsel):
+        # Do we have a new selection?
         if newsel == None:
             self.hasSelection = False
             return
+        
+        # What did we have before?
+        hadSelection = self.hasSelection
+        if hadSelection:
+            oldSC = self.selectionStartCoords
+            oldEC = self.selectionEndCoords
+        
+        # Update selection.
         self.selectionStartCoords = newsel[0]
         self.selectionEndCoords = newsel[1]
         self.hasSelection = True
+        
+        # Do we need to clear the old selection on screen?
+        if hadSelection:
+            self._RedrawTileSection(oldSC, oldEC, 2)
+        
+        # Draw the new selection on screen.
+        self._RedrawTileSection(newsel[0], newsel[1], 2)

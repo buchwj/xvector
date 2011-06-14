@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MapEditor.ui'
 #
-# Created: Thu May 12 17:21:56 2011
+# Created: Tue Jun 14 00:29:20 2011
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -41,7 +41,7 @@ class Ui_MapEditorWindow(object):
         self.ResourceScroll.setWidgetResizable(True)
         self.ResourceScroll.setObjectName(_fromUtf8("ResourceScroll"))
         self.ResourceArea = QtGui.QWidget()
-        self.ResourceArea.setGeometry(QtCore.QRect(0, 0, 160, 542))
+        self.ResourceArea.setGeometry(QtCore.QRect(0, 0, 160, 538))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -64,7 +64,7 @@ class Ui_MapEditorWindow(object):
         self.horizontalLayout.addWidget(self.mdiArea)
         MapEditorWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MapEditorWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 27))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menu_File = QtGui.QMenu(self.menubar)
         self.menu_File.setObjectName(_fromUtf8("menu_File"))
@@ -143,6 +143,14 @@ class Ui_MapEditorWindow(object):
         icon9.addPixmap(QtGui.QPixmap(_fromUtf8(":/ActionIcons/res/edit-redo.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.action_Redo.setIcon(icon9)
         self.action_Redo.setObjectName(_fromUtf8("action_Redo"))
+        self.action_Next_Window = QtGui.QAction(MapEditorWindow)
+        self.action_Next_Window.setObjectName(_fromUtf8("action_Next_Window"))
+        self.action_Previous_Window = QtGui.QAction(MapEditorWindow)
+        self.action_Previous_Window.setObjectName(_fromUtf8("action_Previous_Window"))
+        self.action_Tile_Windows = QtGui.QAction(MapEditorWindow)
+        self.action_Tile_Windows.setObjectName(_fromUtf8("action_Tile_Windows"))
+        self.action_Cascade_Windows = QtGui.QAction(MapEditorWindow)
+        self.action_Cascade_Windows.setObjectName(_fromUtf8("action_Cascade_Windows"))
         self.menu_File.addAction(self.action_New)
         self.menu_File.addAction(self.action_Open)
         self.menu_File.addAction(self.action_Save)
@@ -159,7 +167,11 @@ class Ui_MapEditorWindow(object):
         self.menu_Help.addAction(self.action_Contents)
         self.menu_Help.addSeparator()
         self.menu_Help.addAction(self.action_About)
-        self.menu_Window.addAction(self.actionNone)
+        self.menu_Window.addAction(self.action_Next_Window)
+        self.menu_Window.addAction(self.action_Previous_Window)
+        self.menu_Window.addAction(self.action_Tile_Windows)
+        self.menu_Window.addAction(self.action_Cascade_Windows)
+        self.menu_Window.addSeparator()
         self.menuMap.addAction(self.action_Properties)
         self.menubar.addAction(self.menu_File.menuAction())
         self.menubar.addAction(self.menu_Edit.menuAction())
@@ -203,5 +215,9 @@ class Ui_MapEditorWindow(object):
         self.action_Undo.setShortcut(QtGui.QApplication.translate("MapEditorWindow", "Ctrl+Z", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Redo.setText(QtGui.QApplication.translate("MapEditorWindow", "&Redo", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Redo.setShortcut(QtGui.QApplication.translate("MapEditorWindow", "Ctrl+Y", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Next_Window.setText(QtGui.QApplication.translate("MapEditorWindow", "&Next Window", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Previous_Window.setText(QtGui.QApplication.translate("MapEditorWindow", "&Previous Window", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Tile_Windows.setText(QtGui.QApplication.translate("MapEditorWindow", "&Tile Windows", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Cascade_Windows.setText(QtGui.QApplication.translate("MapEditorWindow", "&Cascade Windows", None, QtGui.QApplication.UnicodeUTF8))
 
 import MapEditor_rc
