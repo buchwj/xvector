@@ -225,28 +225,31 @@ class EditorWidget(QtGui.QWidget):
         self.Layout = QtGui.QVBoxLayout()
         self.Layout.setSpacing(0)
         self.Layout.setMargin(0)
-        self.Layout.addStretch(1)
         self.setLayout(self.Layout)
         
         # we want all of this stuff to be resizable
-        policy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-                                   QtGui.QSizePolicy.Expanding)
+        policy_core = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                        QtGui.QSizePolicy.Expanding)
+        policy_edge = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                        QtGui.QSizePolicy.Maximum)
         
         # create the layer selector and add it
         self.LayerSel = LayerSelector(parent=self, value=0)
         '''The layer selector widget.'''
         self.LayerSel.max_depth = map.depth
+        self.LayerSel.setSizePolicy(policy_edge)
         self.Layout.addWidget(self.LayerSel)
 
         # create the scroll area and add it
         self.ScrollArea = QtGui.QScrollArea(parent=self)
         """The scroll area that contains the MapWidget."""
-        self.ScrollArea.setSizePolicy(policy)
+        self.ScrollArea.setSizePolicy(policy_core)
         self.Layout.addWidget(self.ScrollArea)
         
         # create the status bar and add it
         self.StatusBar = QtGui.QStatusBar(parent=self)
         """The status bar of the window."""
+        self.StatusBar.setSizePolicy(policy_edge)
         self.Layout.addWidget(self.StatusBar)
         
         self.CoordinateLabel = QtGui.QLabel(parent=self.StatusBar)
