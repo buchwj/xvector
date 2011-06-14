@@ -108,7 +108,8 @@ class NewMapDialog(QtGui.QDialog):
         """
         Called when the user clicks Cancel.
         """
-        print "[debug] NewMapDialog.OnCancel()"    # TODO: Implement
+        # Don't do anything
+        pass
 
 
 class LayerSelector(QtGui.QWidget):
@@ -665,6 +666,7 @@ class MapEditWidget(QtGui.QWidget):
         x = point.x()
         y = point.y()
         curtile = self.renderer.GetTileMajorXY(x, y)
+        curtile = self._ReboundCoordinates(curtile)
         tileX, tileY = curtile
         
         # Has the mouse moved onto a new tile?
@@ -781,6 +783,20 @@ class MapEditWidget(QtGui.QWidget):
         cursor = self.MainWindow.Toolbox.CurrentCursor
         self.setCursor(cursor)
     
+    def _ReboundCoordinates(self, coords):
+        '''
+        Rebounds coordinates to ensure that they are inside of the map.
+        
+        @return: Tuple containing the rebounded coordinates.
+        '''
+        x = coords[0]
+        y = coords[1]
+        if x < 0: x = 0
+        if x >= self.map.width: x = self.map.width - 1
+        if y < 0: y = 0
+        if y >= self.map.height: y = self.map.height - 1
+        return (x,y)
+    
     @property
     def selection(self):
         '''
@@ -806,8 +822,8 @@ class MapEditWidget(QtGui.QWidget):
         
         # Update selection.
         if newsel:
-            self.selectionStartCoords = newsel[0]
-            self.selectionEndCoords = newsel[1]
+            self.selectionStartCoords = self._ReboundCoordinates(newsel[0])
+            self.selectionEndCoords = self._ReboundCoordinates(newsel[1])
             self.hasSelection = True
         
         # Do we need to clear the old selection on screen?
