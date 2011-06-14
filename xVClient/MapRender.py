@@ -338,6 +338,9 @@ class MapRenderer(object):
                     print "\tcoordinates:", x, ",", y
                     continue
                 # do we have the sprite?
+                if tile.tileid == 0:
+                    # blank tile, don't bother drawing it
+                    continue
                 try:
                     sprite = Sprite.spritesets['tiles'][tile.tileid]
                 except KeyError:
