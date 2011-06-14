@@ -132,6 +132,9 @@
     <addaction name="action_Copy"/>
     <addaction name="actionC_ut"/>
     <addaction name="action_Paste"/>
+    <addaction name="separator"/>
+    <addaction name="action_Select_All"/>
+    <addaction name="action_Deselect"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
@@ -198,6 +201,9 @@
    </property>
   </action>
   <action name="action_Copy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MapEditor.qrc">
      <normaloff>:/ActionIcons/res/edit-copy.png</normaloff>:/ActionIcons/res/edit-copy.png</iconset>
@@ -210,6 +216,9 @@
    </property>
   </action>
   <action name="actionC_ut">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MapEditor.qrc">
      <normaloff>:/ActionIcons/res/edit-cut.png</normaloff>:/ActionIcons/res/edit-cut.png</iconset>
@@ -222,6 +231,9 @@
    </property>
   </action>
   <action name="action_Paste">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MapEditor.qrc">
      <normaloff>:/ActionIcons/res/edit-paste.png</normaloff>:/ActionIcons/res/edit-paste.png</iconset>
@@ -305,6 +317,9 @@
    </property>
   </action>
   <action name="action_Undo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MapEditor.qrc">
      <normaloff>:/ActionIcons/res/edit-undo.png</normaloff>:/ActionIcons/res/edit-undo.png</iconset>
@@ -317,6 +332,9 @@
    </property>
   </action>
   <action name="action_Redo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MapEditor.qrc">
      <normaloff>:/ActionIcons/res/edit-redo.png</normaloff>:/ActionIcons/res/edit-redo.png</iconset>
@@ -346,6 +364,22 @@
   <action name="action_Cascade_Windows">
    <property name="text">
     <string>&amp;Cascade Windows</string>
+   </property>
+  </action>
+  <action name="action_Select_All">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Select All</string>
+   </property>
+  </action>
+  <action name="action_Deselect">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Deselect</string>
    </property>
   </action>
  </widget>

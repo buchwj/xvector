@@ -327,15 +327,27 @@ class MainWindow(QtGui.QMainWindow):
         """
         Called when the menu item Edit->Undo is clicked.
         """
-        # TODO: Implement
-        pass
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow:
+            # undo clicked, but no active subwindow; do nothing
+            return
+        
+        # Call undo
+        subwindow.widget().onUndo()
 
     def OnEditRedo(self):
         """
         Called when the menu item Edit->Redo is clicked.
         """
-        # TODO: Implement
-        pass
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow:
+            # undo clicked, but no active subwindow; do nothing
+            return
+        
+        # Call redo
+        subwindow.widget().onRedo()
 
     def OnEditCopy(self):
         """

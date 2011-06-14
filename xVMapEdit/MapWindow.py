@@ -192,6 +192,10 @@ class LayerSelector(QtGui.QWidget):
         self.parent().MapWidget.current_layer = layer
 
 
+class ActionNotPermittedException(Exception): pass
+'''Raised if an action cannot be performed on a given editor.'''
+
+
 class InvalidSelectionException(Exception): pass
 '''Raised if a selection in the map editor is determined to be invalid.'''
 
@@ -275,6 +279,9 @@ class EditorWidget(QtGui.QWidget):
         
         # fix the tab order
         self.setTabOrder(self.ScrollArea, self.LayerSel)
+        
+        # set the focus policy
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
     
     def PushUndoOperation(self, change):
         '''
@@ -378,7 +385,39 @@ class EditorWidget(QtGui.QWidget):
         self._UpdateUndoRedoButtons()
         
         # Let the window do its usual thing.
-        super(self,EditorWidget).focusInEvent(event)
+        super(EditorWidget,self).focusInEvent(event)
+    
+    def onUndo(self):
+        '''
+        Called when Undo is clicked when this window is active.
+        
+        @raise ActionNotPermittedException: Raised if there is nothing to undo.
+        '''
+        # Is undo even possible?
+        if len(self.UndoStack) == 0:
+            # Can't undo
+            raise ActionNotPermittedException("Nothing to undo.")
+        
+        # Undo
+        change = self.UndoStack.pop()
+        change.UndoChange()
+        self.PushRedoOperation(change)
+    
+    def onRedo(self):
+        '''
+        Called when Redo is clicked when this window is active.
+        
+        @raise ActionNotPermittedException: Raised if there is nothing to redo.
+        '''
+        # Is redo even possible?
+        if len(self.RedoStack) == 0:
+            # Can't redo
+            raise ActionNotPermittedException("Nothing to redo.")
+        
+        # Redo
+        change = self.RedoStack.pop()
+        change.RedoChange()
+        self.PushUndoOperation(change)
         
     @property
     def selection(self):
@@ -755,25 +794,26 @@ class MapEditWidget(QtGui.QWidget):
     
     @selection.setter
     def selection(self, newsel):
-        # Do we have a new selection?
-        if newsel == None:
-            self.hasSelection = False
-            return
-        
         # What did we have before?
         hadSelection = self.hasSelection
         if hadSelection:
             oldSC = self.selectionStartCoords
             oldEC = self.selectionEndCoords
         
+        # Do we have a new selection?
+        if not newsel:
+            self.hasSelection = False
+        
         # Update selection.
-        self.selectionStartCoords = newsel[0]
-        self.selectionEndCoords = newsel[1]
-        self.hasSelection = True
+        if newsel:
+            self.selectionStartCoords = newsel[0]
+            self.selectionEndCoords = newsel[1]
+            self.hasSelection = True
         
         # Do we need to clear the old selection on screen?
         if hadSelection:
             self._RedrawTileSection(oldSC, oldEC, 2)
         
         # Draw the new selection on screen.
-        self._RedrawTileSection(newsel[0], newsel[1], 2)
+        if newsel:
+            self._RedrawTileSection(newsel[0], newsel[1], 2)

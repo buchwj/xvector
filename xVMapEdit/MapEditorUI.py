@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MapEditor.ui'
 #
-# Created: Tue Jun 14 00:29:20 2011
+# Created: Tue Jun 14 11:50:39 2011
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -90,16 +90,19 @@ class Ui_MapEditorWindow(object):
         self.action_About = QtGui.QAction(MapEditorWindow)
         self.action_About.setObjectName(_fromUtf8("action_About"))
         self.action_Copy = QtGui.QAction(MapEditorWindow)
+        self.action_Copy.setEnabled(False)
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap(_fromUtf8(":/ActionIcons/res/edit-copy.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.action_Copy.setIcon(icon1)
         self.action_Copy.setObjectName(_fromUtf8("action_Copy"))
         self.actionC_ut = QtGui.QAction(MapEditorWindow)
+        self.actionC_ut.setEnabled(False)
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap(_fromUtf8(":/ActionIcons/res/edit-cut.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionC_ut.setIcon(icon2)
         self.actionC_ut.setObjectName(_fromUtf8("actionC_ut"))
         self.action_Paste = QtGui.QAction(MapEditorWindow)
+        self.action_Paste.setEnabled(False)
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(_fromUtf8(":/ActionIcons/res/edit-paste.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.action_Paste.setIcon(icon3)
@@ -134,11 +137,13 @@ class Ui_MapEditorWindow(object):
         self.actionClose = QtGui.QAction(MapEditorWindow)
         self.actionClose.setObjectName(_fromUtf8("actionClose"))
         self.action_Undo = QtGui.QAction(MapEditorWindow)
+        self.action_Undo.setEnabled(False)
         icon8 = QtGui.QIcon()
         icon8.addPixmap(QtGui.QPixmap(_fromUtf8(":/ActionIcons/res/edit-undo.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.action_Undo.setIcon(icon8)
         self.action_Undo.setObjectName(_fromUtf8("action_Undo"))
         self.action_Redo = QtGui.QAction(MapEditorWindow)
+        self.action_Redo.setEnabled(False)
         icon9 = QtGui.QIcon()
         icon9.addPixmap(QtGui.QPixmap(_fromUtf8(":/ActionIcons/res/edit-redo.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.action_Redo.setIcon(icon9)
@@ -151,6 +156,12 @@ class Ui_MapEditorWindow(object):
         self.action_Tile_Windows.setObjectName(_fromUtf8("action_Tile_Windows"))
         self.action_Cascade_Windows = QtGui.QAction(MapEditorWindow)
         self.action_Cascade_Windows.setObjectName(_fromUtf8("action_Cascade_Windows"))
+        self.action_Select_All = QtGui.QAction(MapEditorWindow)
+        self.action_Select_All.setEnabled(False)
+        self.action_Select_All.setObjectName(_fromUtf8("action_Select_All"))
+        self.action_Deselect = QtGui.QAction(MapEditorWindow)
+        self.action_Deselect.setEnabled(False)
+        self.action_Deselect.setObjectName(_fromUtf8("action_Deselect"))
         self.menu_File.addAction(self.action_New)
         self.menu_File.addAction(self.action_Open)
         self.menu_File.addAction(self.action_Save)
@@ -164,6 +175,9 @@ class Ui_MapEditorWindow(object):
         self.menu_Edit.addAction(self.action_Copy)
         self.menu_Edit.addAction(self.actionC_ut)
         self.menu_Edit.addAction(self.action_Paste)
+        self.menu_Edit.addSeparator()
+        self.menu_Edit.addAction(self.action_Select_All)
+        self.menu_Edit.addAction(self.action_Deselect)
         self.menu_Help.addAction(self.action_Contents)
         self.menu_Help.addSeparator()
         self.menu_Help.addAction(self.action_About)
@@ -219,5 +233,7 @@ class Ui_MapEditorWindow(object):
         self.action_Previous_Window.setText(QtGui.QApplication.translate("MapEditorWindow", "&Previous Window", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Tile_Windows.setText(QtGui.QApplication.translate("MapEditorWindow", "&Tile Windows", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Cascade_Windows.setText(QtGui.QApplication.translate("MapEditorWindow", "&Cascade Windows", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Select_All.setText(QtGui.QApplication.translate("MapEditorWindow", "&Select All", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Deselect.setText(QtGui.QApplication.translate("MapEditorWindow", "&Deselect", None, QtGui.QApplication.UnicodeUTF8))
 
 import MapEditor_rc
