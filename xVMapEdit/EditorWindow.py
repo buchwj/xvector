@@ -107,6 +107,18 @@ class ResourceToggle(object):
             pass    # TODO: Implement
         else:
             print "[error] unrecognized resource view", id, "selected"
+    
+    @property
+    def SelectedResource(self):
+        '''
+        Property method for getting the ID of the selected resource.
+        '''
+        return self.ButtonGroup.checkedId()
+    
+    @SelectedResource.setter
+    def SelectedResource(self, resource):
+        button = self.ButtonGroup.button(resource)
+        button.setChecked(True)
 
 
 class ToolToggle(object):

@@ -264,7 +264,7 @@ class BaseMap(object):
             raise MapError("Map must have positive dimensions to be initialized")
         
         # initialize blank tiles
-        tiles = []
+        self.tiles = []
         for z in range(depth):
             self.tiles.append([])
             for x in range(width):

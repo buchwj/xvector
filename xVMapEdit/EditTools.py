@@ -20,7 +20,10 @@ Tool classes (select, draw, flood, etc.), and the undo/redo support classes.
 '''
 
 from xVMapEdit import EditorGlobals
+from xVLib import Maps
 from PyQt4 import QtCore, QtGui
+
+import copy
 
 class ReversibleChange(object):
     '''
@@ -91,7 +94,7 @@ class Tool(object):
         
         This must be reimplemented by all subclasses.
         
-        @type editor: MapWindow.EditorWidget
+        @type editor: xVMapEdit.MapWindow.EditorWidget
         @param editor: Editor on which to operate.
         
         @type startTileCoords: integer tuple
@@ -128,6 +131,16 @@ class Tool(object):
         # not implemented in the base class
         pass
 
+
+# These constants define the type of map property that was changed by an
+# operation.
+
+ChangeType_Tiles = 0
+'''Indicates that tiles were modified by a tool.'''
+
+
+class UnsupportedChangeType(Exception): pass
+'''Raised if a change type is not supported by a given operation.'''
 
 # Okay, now that we've defined the base classes, let's define our
 # actual tools.
@@ -314,14 +327,216 @@ class PenChange(ReversibleChange):
     '''
     ReversibleChange subclass for the Pen tool.
     '''
-    pass    # TODO: Implement
+    
+    def __init__(self, editor):
+        '''
+        Creates a new record of a Pen operation.
+        
+        @type editor: MapWindow.EditorWidget
+        @param editor: Editor to which this change applies.
+        '''
+        # Inherit any base class behavior.
+        super(PenChange,self).__init__(editor)
+        
+        # Declare our attributes.
+        self.ChangeType = ChangeType_Tiles
+        '''Type of map resource that was modified by this operation.'''
+        self.Layer = 0
+        '''Layer at which this change was made.'''
+        self.PreviousState = {}
+        '''
+        Previous state of the map prior to the change.
+        
+        This is stored as two dicts, addressable as [x][y].
+        '''
+        self.NewState = {}
+        '''
+        New state of the map after the change.
+        
+        This is stored as two dicts, addressable as [x][y].
+        '''
+    
+    def UndoChange(self):
+        '''
+        Undoes the Pen operation.
+        
+        @raise UnsupportedChangeType: Raised if the resource type is not
+        recognized.
+        '''
+        # Walk through the new state.
+        for x in range(self.editor.map.width):
+            # Any changes made to this column?
+            if x in self.PreviousState:
+                for y in range(self.editor.map.height):
+                    # Any changes made to this coordinate?
+                    if y in self.PreviousState[x]:
+                        # Restore the state.
+                        old = self.PreviousState[x][y]
+                        # What type of resource are we restoring?
+                        if self.ChangeType == ChangeType_Tiles:
+                            # Restore tile.
+                            target = self.editor.map
+                            target[self.Layer][x][y].tileid = old
+                        else:
+                            # Unknown type.
+                            raise UnsupportedChangeType()
+    
+    def RedoChange(self):
+        '''
+        Redoes the Pen operation.
+        
+        @raise UnsupportedChangeType: Raised if the resource type is not
+        recognized.
+        '''
+        # Walk through the new state.
+        for x in range(self.editor.map.width):
+            # Any changes made to this column?
+            if x in self.NewState:
+                for y in range(self.editor.map.height):
+                    # Any changes made to this coordinate?
+                    if y in self.NewState[x]:
+                        # Restore the state.
+                        new = self.NewState[x][y]
+                        # What type of resource are we restoring?
+                        if self.ChangeType == ChangeType_Tiles:
+                            # Restore tile.
+                            target = self.editor.map
+                            target[self.Layer][x][y].tileid = new
+                        else:
+                            # Unknown type.
+                            raise UnsupportedChangeType()
 
 
 class PenTool(Tool):
     '''
     Tool subclass for the Pen tool.
     '''
-    pass    # TODO: Implement
+    def __init__(self):
+        '''Initializes the Pen tool.'''
+        # Inherit any base class behavior.
+        super(PenTool,self).__init__()
+        
+        # Declare attributes.
+        self.currentEditor = None
+        '''Editor that the Pen tool is currently operating on.'''
+        self.currentOperation = None
+        '''PenChange record of the current operation.'''
+        self.currentID = 0
+        '''For updating tiles, the tile ID that is being drawn.'''
+    
+    def BeginOperation(self, editor, startTileCoords):
+        '''
+        Begins a new Pen operation.
+        
+        @raise UnsupportedChangeType: Raised if the resource type is not
+        recognized.
+        
+        @type editor: xVMapEdit.MapWindow.EditorWidget
+        @param editor: Editor on which to operate.
+        
+        @type startTileCoords: integer tuple
+        @param startTileCoords: Coordinates of the first tile of the operation.
+        '''
+        # Inherit any base class behavior.
+        super(PenTool,self).BeginOperation(editor, startTileCoords)
+        
+        # Begin filling out the operation record.
+        self.currentEditor = editor
+        self.currentOperation = PenChange(editor)
+        self.currentOperation.Layer = editor.Layer
+        
+        # What are we modifying?
+        MainApp = EditorGlobals.MainApp
+        restoggle = MainApp.mainwnd.restoggle
+        resource = restoggle.SelectedResource
+        if resource == restoggle.ID_Tiles:
+            # Editing tiles... replace it
+            self.currentOperation.ChangeType = ChangeType_Tiles
+            self.currentID = MainApp.mainwnd.choosermodels['tiles'].selected
+            self._UpdateTile(startTileCoords)
+        else:
+            # Unrecognized change type
+            raise UnsupportedChangeType("Unknown resource type.")
+    
+    def ContinueOperation(self, nextTileCoords):
+        '''
+        Continues an existing operation.
+        
+        @raise NoOperationException: Raised if no operation is in progress.
+        @raise UnsupportedChangeType: Raised if the resource type is not
+        recognized.
+        
+        @type nextTileCoords: integer tuple
+        @param nextTileCoords: Coordinates of the next tile of the operation.
+        '''
+        # Inherit any base class behavior.
+        super(PenTool,self).ContinueOperation(nextTileCoords)
+        
+        # Is there any operation in progress?
+        if not self.currentEditor:
+            # No, there is not.
+            raise NoOperationException("The Pen tool has not been started.")
+        
+        # What are we modifying?
+        if self.currentOperation.ChangeType == ChangeType_Tiles:
+            # Editing tiles... replace it
+            self._UpdateTile(nextTileCoords)
+        else:
+            # Unrecognized change type
+            raise UnsupportedChangeType("Unknown resource type.")
+    
+    def EndOperation(self):
+        '''
+        Ends an existing operation.
+        
+        @raise NoOperationException: Raised if no operation is in progress.
+        
+        @return: A PenChange object representing the completed operation.
+        '''
+        # Is there an operation in progress?
+        if not self.currentEditor:
+            # No, there is not.
+            raise NoOperationException("The Pen tool has not been started.")
+        
+        # end the operation
+        record = self.currentOperation
+        self.currentEditor = None
+        self.currentID = 0
+        self.currentOperation = None
+        return record
+    
+    def _UpdateTile(self, coordinates):
+        '''
+        Updates the tile with the given coordinates to the given ID, and logs
+        the change.
+        
+        This method is only for modifying tiles.  Other resources must use
+        other methods.
+        '''
+        # validate parameters
+        x,y = coordinates
+        if x < 0 or y < 0:
+            raise IndexError("Coordinates out of bounds.")
+        if x >= self.currentEditor.map.width:
+            raise IndexError("Coordinates out of bounds.")
+        if y >= self.currentEditor.map.height:
+            raise IndexError("Coordinates out of bounds.")
+        if self.currentID < 0:
+            raise IndexError("Tile ID must be positive.")
+        
+        # update tile
+        map = self.currentEditor.map
+        z = self.currentEditor.Layer
+        old_id = map.tiles[z][x][y].tileid
+        map.tiles[z][x][y].tileid = self.currentID
+        
+        # log change
+        if x not in self.currentOperation.PreviousState:
+            self.currentOperation.PreviousState[x] = {}
+            self.currentOperation.NewState[x] = {}
+        if y not in self.currentOperation.PreviousState[x]:
+            self.currentOperation.PreviousState[x][y] = old_id
+            self.currentOperation.NewState[x][y] = self.currentID
 
 
 ###############################################################################

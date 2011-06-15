@@ -61,6 +61,7 @@ class NewMapDialog(QtGui.QDialog):
         # attach our user interface
         self.uiobj = NewMapDialogUI.Ui_NewMapDialog()
         self.uiobj.setupUi(self)
+        self.uiobj.txtMapName.setFocus()
         
         # add our signals
         self.connect(self.uiobj.buttonBox, QtCore.SIGNAL("accepted()"),
@@ -431,6 +432,28 @@ class EditorWidget(QtGui.QWidget):
     @selection.setter
     def selection(self, select):
         self.MapWidget.selection = select
+    
+    @property
+    def Layer(self):
+        '''
+        Property method for getting and setting the current layer.
+        '''
+        return self.LayerSel.layer
+    
+    @Layer.setter
+    def Layer(self, newlayer):
+        self.LayerSel.layer = newlayer
+    
+    @property
+    def map(self):
+        '''
+        Property method for getting the map from this editor.
+        '''
+        return self.MapWidget.map
+    
+    @map.setter
+    def map(self, newmap):
+        self.MapWidget.map = newmap
 
 
 class MapEditWidget(QtGui.QWidget):
@@ -470,7 +493,7 @@ class MapEditWidget(QtGui.QWidget):
         '''Status bar element to be updated with cursor position.'''
         self.renderer = MapRender.MapRenderer()
         '''Renderer object for our map.'''
-        self.current_layer = 0
+        self._current_layer = 0
         '''Current layer (used to determine alpha blending in rendering)'''
         self.prev_tile = (-1,-1)
         '''Last tile that mouse hovered over. Used to check tile changes.'''
@@ -487,6 +510,16 @@ class MapEditWidget(QtGui.QWidget):
         
         # Enable mouse tracking.
         self.setMouseTracking(True)
+
+    @property
+    def current_layer(self):
+        '''Property method for getting and setting the current layer.'''
+        return self._current_layer
+    
+    @current_layer.setter
+    def current_layer(self, newlayer):
+        self._current_layer = newlayer
+        self.update()
 
     @property
     def map(self):
@@ -537,9 +570,8 @@ class MapEditWidget(QtGui.QWidget):
             # transparency depending on their distance above the current
             # layer; we determine this amount here.
             distAbove = z - self.current_layer
-            if distAbove < 0: distAbove = 0
-            alpha = 255 - 50 * distAbove
-            if alpha < 0: alpha = 0
+            if distAbove <= 0: alpha = 255
+            else: alpha = 90
             
             # go ahead and render the layer
             self.renderer.RenderLayer(self, targetCoords, sourceCoords, (0,0),
@@ -693,6 +725,7 @@ class MapEditWidget(QtGui.QWidget):
                     try:
                         currentTool = self.MainWindow.Toolbox.CurrentTool
                         currentTool.ContinueOperation(curtile)
+                        self.update()
                     except:
                         # report the error
                         message = "Error while continuing the tool operation."
@@ -728,6 +761,7 @@ class MapEditWidget(QtGui.QWidget):
             try:
                 currentTool = self.MainWindow.Toolbox.CurrentTool
                 currentTool.BeginOperation(self.EditorWindow, curtile)
+                self.update()
                 self.usingTool = True
             except:
                 # Report the error.
@@ -754,6 +788,7 @@ class MapEditWidget(QtGui.QWidget):
                 # Finish using the tool.
                 currentTool = self.MainWindow.Toolbox.CurrentTool
                 change = currentTool.EndOperation()
+                self.update()
                 self.usingTool = False
                 
                 # Push the operation onto the undo stack, clear the redo stack.
