@@ -65,7 +65,7 @@ def SerializeUTF8String(fileobj, string):
     @param string: String to serialize into the file.
     """
     # figure out what we're serializing
-    toSerialize = string.encode('utf-8')
+    toSerialize = str(string).encode('utf-8')
     width = len(toSerialize)
     
     # serialize

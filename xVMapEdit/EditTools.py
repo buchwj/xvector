@@ -375,7 +375,7 @@ class PenChange(ReversibleChange):
                         # What type of resource are we restoring?
                         if self.ChangeType == ChangeType_Tiles:
                             # Restore tile.
-                            target = self.editor.map
+                            target = self.editor.map.tiles
                             target[self.Layer][x][y].tileid = old
                         else:
                             # Unknown type.
@@ -400,7 +400,7 @@ class PenChange(ReversibleChange):
                         # What type of resource are we restoring?
                         if self.ChangeType == ChangeType_Tiles:
                             # Restore tile.
-                            target = self.editor.map
+                            target = self.editor.map.tiles
                             target[self.Layer][x][y].tileid = new
                         else:
                             # Unknown type.

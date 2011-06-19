@@ -22,7 +22,8 @@ Contains the main window class for the map editor.
 from PyQt4 import QtCore, QtGui
 from xVMapEdit import MapEditorUI, MapEditorAboutUI, TileChooser, MapWindow
 from xVMapEdit import EditTools, EditorGlobals
-from xVClient import Sprite
+from xVClient import Sprite, ErrorReporting
+from xVLib import Maps
 
 class ResourceToggle(object):
     """
@@ -311,22 +312,54 @@ class MainWindow(QtGui.QMainWindow):
         """
         Called when the menu item File->Open is clicked.
         """
-        # TODO: Implement
-        pass
+        # Get the filepath to open
+        caption = "Open File"
+        filter = "Map Files (*.xvm);;All Files (*.*)"
+        filepath = QtGui.QFileDialog.getOpenFileName(parent=self,
+                                                     caption=caption,
+                                                     filter=filter)
+        if not filepath:
+            # User clicked cancel, do nothing
+            return
+        
+        # Open the file
+        openedMap = Maps.Map()
+        try:
+            openedMap.LoadMapFromFile(filepath)
+            editor = MapWindow.EditorWidget(map=openedMap)
+            subwindow = self.ui.mdiArea.addSubWindow(editor)
+            subwindow.setWindowTitle(openedMap.header.mapname)
+            subwindow.show()
+        except:
+            # something went wrong, show the error
+            message = "An error occurred while opening the map."
+            ErrorReporting.ShowException(parent=self, start_msg=message)
 
     def OnFileSave(self):
         """
         Called when the menu item File->Save is clicked.
         """
-        # TODO: Implement
-        pass
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow:
+            # no active subwindow; do nothing
+            return
+        
+        # Call save
+        subwindow.widget().onSave()
 
     def OnFileSaveAs(self):
         """
         Called when the menu item File->Save As... is clicked.
         """
-        # TODO: Implement
-        pass
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow:
+            # no active subwindow; do nothing
+            return
+        
+        # Call save as
+        subwindow.widget().onSaveAs()
 
     def OnFileClose(self):
         """

@@ -53,9 +53,6 @@ spritefiles = filter(matcherSPRITE, spritefiles_potential)
 spritefiles_final = [os.path.join(spritedir, s) for s in spritefiles]
 resources.append(('sprites', spritefiles_final))
 
-else:
-    cmdclass = {}
-
 setup(name='xVector',
       version=ClientVersion.GetVersionString(),
       description='xVector MMORPG Engine (client and map editor)',
@@ -68,7 +65,7 @@ setup(name='xVector',
       provides=['xVClient', 'xVMapEdit'],
       scripts=['xVClient/Client.py', 'xVMapEdit/MapEditor.py'],
       data_files=resources,
-      cmdclass=cmdclass,
+      cmdclass={},
       windows=['xVClient/Client.py', 'xVMapEdit/MapEditor.py'],
       zipfile='core.dat',
       options={'py2exe':{'includes':['sip']}})

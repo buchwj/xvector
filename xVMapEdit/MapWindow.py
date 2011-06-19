@@ -93,6 +93,7 @@ class NewMapDialog(QtGui.QDialog):
         # Create our new map
         try:
             NewMap = Maps.Map(width, height, depth)
+            NewMap.header.mapname = name
         except Exception:
             ErrorReporting.ShowException(ErrorReporting.NormalError,
                                          "Error while creating new map.",
@@ -235,6 +236,10 @@ class EditorWidget(QtGui.QWidget):
         '''A stack containing previous (undoable) operations.'''
         self.RedoStack = []
         '''A stack containing the next (redoable) operations.'''
+        self.FilePath = None
+        '''Path to which this file is saved; None if not yet saved.'''
+        self.FileChanged = False
+        '''True if changes have been made to the file.'''
 
         # create the layout
         self.Layout = QtGui.QVBoxLayout()
@@ -404,6 +409,7 @@ class EditorWidget(QtGui.QWidget):
         change = self.UndoStack.pop()
         change.UndoChange()
         self.PushRedoOperation(change)
+        self.MapWidget.update()
     
     def onRedo(self):
         '''
@@ -420,6 +426,43 @@ class EditorWidget(QtGui.QWidget):
         change = self.RedoStack.pop()
         change.RedoChange()
         self.PushUndoOperation(change)
+        self.MapWidget.update()
+    
+    def onSave(self):
+        '''
+        Called when Save is clicked when this window is active.
+        '''
+        # Has the file been saved yet?
+        if not self.FilePath:
+            # No, we'll need to "Save As..."
+            self.onSaveAs()
+            return
+        
+        # Save the file
+        try:
+            self.map.SaveMapToFile(self.FilePath)
+            self.ClearUndoStack()
+            self.ClearRedoStack()
+        except:
+            ErrorReporting.ShowException(start_msg="Failed to save map.",
+                                         parent=self)
+    
+    def onSaveAs(self):
+        '''
+        Called when Save As is clicked when this window is active.
+        '''
+        # Pick a file path.
+        caption = "Save As..."
+        filter = "Map files (*.xvm);;All files (*.*)"
+        self.FilePath = QtGui.QFileDialog.getSaveFileName(parent=self,
+                                                          caption=caption,
+                                                          filter=filter)
+        if not self.FilePath:
+            # No file path selected.
+            return
+        
+        # Okay, we have a file path, now actually save the file
+        self.onSave()
         
     @property
     def selection(self):

@@ -1,0 +1,57 @@
+============================
+
+  xVector Engine
+  Authors & Credits
+  
+============================
+
+** Should you be on this list, but we've accidentally forgot?
+** Please send an email to buchwj@rpi.edu.
+
+---------
+ AUTHORS
+---------
+
+James Buchwald
+Project Founder, Lead Developer
+<buchwj@rpi.edu>
+
+
+---------
+ CREDITS
+---------
+
+** This section contains recognition of the authors of various resources
+** that were acquired from various sources on the Internet (primarily art,
+** since James has almost no artistic abilities).  A big thanks to all of you.
+
+The tiles in the standard spriteset were created by The Inquisitor and
+are available from http://www.rpg-palace.com/downloads/details.php?id=102.
+
+
+** Icons **
+The following icons found in xVMapEdit/res:
+	* document-new.png
+	* document-open.png
+	* document-save.png
+	* document-save-as.png
+	* edit-copy.png
+	* edit-cut.png
+	* edit-paste.png
+	* edit-undo.png
+	* edit-redo.png
+	* help-browser.png
+are borrowed from the GNOME Desktop Environment Icon Theme and are distributed
+under the Creative Commons BY-SA license.  Authors of the icons:
+	Ulisse Perusin <uli.peru@gmail.com>
+	Riccardo Buzzotta <raozuzu@yahoo.it>
+	Josef Vybíral <cornelius@vybiral.info>
+	Hylke Bons <h.bons@gmail.com>
+	Ricardo González <rick@jinlabs.com>
+	Lapo Calamandrei <calamandrei@gmail.com>
+	Rodney Dawes <dobey@novell.com>
+	Luca Ferretti <elle.uca@libero.it>
+	Tuomas Kuosmanen <tigert@gimp.org>
+	Andreas Nilsson <nisses.mail@home.se>
+	Jakub Steiner <jimmac@novell.com>
+(The icons were grabbed from the gnome-icon-theme package from Fedora 14.)

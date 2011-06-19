@@ -360,23 +360,17 @@ class BaseMap(object):
     def LoadMapFromFile(self, filepath):
         """
         Loads the map with the given filepath.
+        
+        @warning
+        You should expect exceptions to be raised by this method.  MapError
+        and IOError are common, but there's some others, too.
 
         @type filepath: string
         @param filepath: Filepath of the map file to be loaded
         """
         # open the map file
-        try:
-            mapfile = open(filepath, "rb")
-            self.LoadFromOpenFile(mapfile)
-        except IOError as err:
-            # an error occurred while handling a file
-            raise MapError("IOError: " + str(err))
-        except MapError as err:
-            # let it slip through to higher-up handlers
-            pass
-        except Exception as err:
-            # an unexpected error occurred
-            raise MapError("UNEXPECTED ERROR: " + str(err))
+        mapfile = open(filepath, "rb")
+        self.LoadFromOpenFile(mapfile)
 
     def LoadFromOpenFile(self, fileobj):
         """
@@ -416,20 +410,23 @@ class BaseMap(object):
 
         # now we read in each tile
         try:
-            while True:
+            # we can only have a maximum tilecount of w*h*d...
+            # (it's kinda like the Pauli Exclusion Principle...)
+            # ALL TILES HAVE UNIQUE QUANTUM STATES!!!
+            for tilenum in range(self.width * self.height * self.depth):
                 # read in the next tile
                 try:
                     tile = Tile().Deserialize(fileobj, formatver)
                 except IOError as e:
                     raise MapError("Invalid/corrupt map file", e)
                 # validate the tile
-                if tile.x < 1 or tile.x > self.width:
+                if tile.x < 0 or tile.x >= self.width:
                     # invalid tile
                     raise MapError("invalid tile found: x-coordinate out of bounds")
-                elif tile.y < 1 or tile.y > self.height:
+                elif tile.y < 0 or tile.y >= self.height:
                     # invalid tile
                     raise MapError("invalid tile found: y-coordinate out of bounds")
-                elif tile.z < 1 or tile.z > self.depth:
+                elif tile.z < 0 or tile.z >= self.depth:
                     # invalid tile
                     raise MapError("invalid tile found: z-coordinate out of bounds")
                 elif tile.tileid < 0:
@@ -439,6 +436,7 @@ class BaseMap(object):
                 self.tiles[tile.z][tile.x][tile.y] = tile
         except EndOfSectionException:
             # This is raised when the tiles section ends; it's a good thing.
+            print "[debug] hit end of section"
             pass    # Continue loading the map.
     
     def SaveMapToFile(self, filepath):
@@ -477,10 +475,13 @@ class BaseMap(object):
         self.header.Serialize(fileobj)
         
         # write the tiles
-        for z in self.depth:
-            for x in self.width:
-                for y in self.height:
+        for z in range(self.depth):
+            for x in range(self.width):
+                for y in range(self.height):
                     self.tiles[z][x][y].Serialize(fileobj)
+        
+        # store the end-of-section flag
+        BinaryStructs.SerializeUint(fileobj, Tile.EndOfTilesFlag)
     
     def Resize(self, width, height, depth):
         """
@@ -601,6 +602,8 @@ class MapHeader(object):
         """
         # nothing too special, just write everything in the right order
         try:
+            print "[debug] serializing map header"
+            print "[debug] map name is", self.mapname
             BinaryStructs.SerializeUTF8String(fileobj, self.mapname)
             BinaryStructs.SerializeUint(fileobj, self.width)
             BinaryStructs.SerializeUint(fileobj, self.height)
