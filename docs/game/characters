@@ -1,0 +1,91 @@
+///////////////////////////////////////////////////////////////////////////////
+
+  xVector Engine Technical Documentation
+  Copyright (c) 2011 James Buchwald
+  
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.3
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+    A copy of the license is included in the file "DOCS-LICENSE".
+  
+ -----
+  
+  NPCs, Characters and Stats
+
+///////////////////////////////////////////////////////////////////////////////
+
+--------------
+ Introduction
+--------------
+
+This document describes characters and their properties.  Characters are very
+similar in nature to NPCs; they share many of the same properties, including
+names, appearances, and stats.  Characters are unique, however, in that they
+are player controlled (no AI) and have skills.
+
+
+-----------------------
+ A Common Base: Entity
+-----------------------
+
+Characters and NPCs are considered to be derived from a common base, the Entity
+class.  Entities are objects in the game which act "alive" and have stats.
+They do not have any definition of behavior.  Their properties are described
+in this section.
+
+:: Entity Stats ::
+
+ - Level
+    - All entities have a level which describes their difficulty or
+      advancement.  For players, this is a measure of how "leveled up" a
+      player is; for NPCs, this is an arbitrary number chosen by the designer
+      to represent the difficulty of the NPC.  In either case, it has no actual
+      effect on the game.
+ - HP / Max HP
+    - Health.  All entities possess both a current HP and a maximum HP.  The
+      maximum HP sets an upper bound on the amount of health the entity may
+      have; the current HP keeps track of how wounded the entity has, an entity
+      being considered "dead" when current HP reaches zero.
+ - SP / Max SP
+    - Stamina.  Like HP, all entities possess both a current SP and a maximum
+      SP.  SP is used when using skills and certain special moves.  Unlike HP,
+      there is no consequence for SP reaching zero.
+ - MP / Max MP
+    - Mana.  Like HP, all entities possess both a current MP and a maximum MP.
+      MP is used for casting spells and performing certain special moves.
+      Unlike HP, there is no consequence for MP reaching zero.
+ - Strength
+    - Strength is the primary physical stat of all entities.  It is used in
+      determining the damage dealt by physical attacks.  It can also be used
+      by players in determining the success rate or effectiveness of physical
+      skills.
+ - Dexterity
+    - Dexterity is to physical defense what Strength is to physical offense.
+      It is used in determining the damage received from physical attacks.  It
+      can also be used by players in determining the success rate or
+      effectiveness of physical skills.  For players, having a higher Dexterity
+      when leveling up will result in a greater increase in Max SP.
+ - Constitution
+    - Constitution is the health stat.  It affects things like health regen
+      rate.  Like other stats, it can be used in determining the success rate
+      or effectiveness of certain skills.  For players, having a higher
+      Constitution when leveling up will result in a greater increase in Max
+      HP.
+ - Agility
+    - Agility is the speed stat.  It affects things like attack speed, casting
+      rate, and evasion.
+ - Intelligence
+    - Intelligence is to magic offense what Strength is to physical offense.
+      It is used in determining the damage dealt by magic attacks.  Like other
+      stats, it can be used in determining the success rate or effectiveness
+      of magic-based skills.  For players, having a higher Intelligence (along
+      with Wisdom) when leveling up will result in a greater increase in Max
+      MP.
+ - Wisdom
+    - Wisdom is to magic defense what Dexterity is to physical defense.  It is
+      used in determining the damage received from magic attacks.  Like other
+      stats, it can be used in determining the success rate or effectiveness
+      of magic-based skills.  For players, having a higher Wisdom (along with
+      Intelligence) when leveling up will result in a greater increase in Max
+      MP.
