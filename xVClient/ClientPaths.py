@@ -21,33 +21,10 @@ Contains functions that find the engine's needed filepaths.
 
 import os
 import re
-
+from xVLib import Directories
 
 # constants
 userdir = ".xvector"
-
-
-# Next function borrowed from ActiveState. See link below.
-def _mkdir(newdir):
-    """works the way a good mkdir should :)
-        - already exists, silently complete
-        - regular file in the way, raise an exception
-        - parent directory(ies) does not exist, make them as well
-
-        http://code.activestate.com/recipes/82465/
-    """
-    if os.path.isdir(newdir):
-        pass
-    elif os.path.isfile(newdir):
-        raise OSError("a file with the same name as the desired " \
-                      "dir, '%s', already exists." % newdir)
-    else:
-        head, tail = os.path.split(newdir)
-        if head and not os.path.isdir(head):
-            _mkdir(head)
-        if tail:
-            os.mkdir(newdir)
-# End borrowed code.
 
 
 def CreateUserDataDir():
@@ -57,7 +34,7 @@ def CreateUserDataDir():
     If the directory does not exist, nothing happens.
     """
     dirpath = os.path.join(os.path.expanduser("~"), userdir)
-    _mkdir(dirpath)
+    Directories.mkdir(dirpath)
 
 
 def GetUserFile(filename):

@@ -38,7 +38,7 @@ No issues specific to the Windows platform are currently known.
 -----------------------------
 
 I. Minor graphical glitches in the map editor for some Linux installations
-	* An issue was found on certain Linux distros in which minor graphical
+    * An issue was found on certain Linux distros in which minor graphical
 	  errors occured in the map editor, particularly in the tile selector.
 	  Sometimes when selecting a new tile, the tile selector is not updated
 	  on screen correctly, and the wrong tile (or tiles, as the case may

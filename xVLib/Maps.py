@@ -106,21 +106,21 @@ class Tile(object):
         if self.blocked:
             flags |= self.BlockedFlag
         try:
-            BinaryStructs.SerializeUint(fileobj, flags)
+            BinaryStructs.SerializeUint32(fileobj, flags)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
         # write the coordinates
         try:
-            BinaryStructs.SerializeUint(fileobj, self.x)
-            BinaryStructs.SerializeUint(fileobj, self.y)
-            BinaryStructs.SerializeUint(fileobj, self.z)
+            BinaryStructs.SerializeUint32(fileobj, self.x)
+            BinaryStructs.SerializeUint32(fileobj, self.y)
+            BinaryStructs.SerializeUint32(fileobj, self.z)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
         # write the tile information
         try:
-            BinaryStructs.SerializeUint(fileobj, self.tileid)
+            BinaryStructs.SerializeUint32(fileobj, self.tileid)
         except Exception as e:
             raise IOError("error while writing to map file", e)
     
@@ -158,7 +158,7 @@ class Tile(object):
         """
         # first: the flags
         try:
-            flags = BinaryStructs.DeserializeUint(fileobj)
+            flags = BinaryStructs.DeserializeUint32(fileobj)
         except Exception as e:
             raise MapError("invalid/corrupt map file", e)
         # Check for the end-of-tiles flag.
@@ -174,10 +174,10 @@ class Tile(object):
         # access to the map header for dimensional validation).  Just store
         # the values for now.
         try:
-            self.x = BinaryStructs.DeserializeUint(fileobj)
-            self.y = BinaryStructs.DeserializeUint(fileobj)
-            self.z = BinaryStructs.DeserializeUint(fileobj)
-            self.tileid = BinaryStructs.DeserializeUint(fileobj)
+            self.x = BinaryStructs.DeserializeUint32(fileobj)
+            self.y = BinaryStructs.DeserializeUint32(fileobj)
+            self.z = BinaryStructs.DeserializeUint32(fileobj)
+            self.tileid = BinaryStructs.DeserializeUint32(fileobj)
         except Exception as e:
             raise MapError("invalid/corrupt map file", e)
             
@@ -481,7 +481,7 @@ class BaseMap(object):
                     self.tiles[z][x][y].Serialize(fileobj)
         
         # store the end-of-section flag
-        BinaryStructs.SerializeUint(fileobj, Tile.EndOfTilesFlag)
+        BinaryStructs.SerializeUint32(fileobj, Tile.EndOfTilesFlag)
     
     def Resize(self, width, height, depth):
         """
@@ -605,9 +605,9 @@ class MapHeader(object):
             print "[debug] serializing map header"
             print "[debug] map name is", self.mapname
             BinaryStructs.SerializeUTF8String(fileobj, self.mapname)
-            BinaryStructs.SerializeUint(fileobj, self.width)
-            BinaryStructs.SerializeUint(fileobj, self.height)
-            BinaryStructs.SerializeUint(fileobj, self.depth)
+            BinaryStructs.SerializeUint32(fileobj, self.width)
+            BinaryStructs.SerializeUint32(fileobj, self.height)
+            BinaryStructs.SerializeUint32(fileobj, self.depth)
             BinaryStructs.SerializeUTF8String(fileobj, self.northmap)
             BinaryStructs.SerializeUTF8String(fileobj, self.eastmap)
             BinaryStructs.SerializeUTF8String(fileobj, self.southmap)
@@ -643,9 +643,9 @@ class MapHeader(object):
             try:
                 self.mapname = BinaryStructs.DeserializeUTF8String(fileobj)
                 self.mapname.strip()
-                self.width = BinaryStructs.DeserializeUint(fileobj)
-                self.height = BinaryStructs.DeserializeUint(fileobj)
-                self.depth = BinaryStructs.DeserializeUint(fileobj)
+                self.width = BinaryStructs.DeserializeUint32(fileobj)
+                self.height = BinaryStructs.DeserializeUint32(fileobj)
+                self.depth = BinaryStructs.DeserializeUint32(fileobj)
             except Exception as e:
                 raise MapError("Map file is invalid/corrupt.", e)
             
@@ -669,7 +669,7 @@ class MapHeader(object):
             
             # and then we read in the content flags...
             try:
-                contentflags = BinaryStructs.DeserializeUint(fileobj)
+                contentflags = BinaryStructs.DeserializeUint32(fileobj)
             except Exception as e:
                 raise MapError("Map file is invalid/corrupt.", e)
             self.stripped = contentflags & self.Flag_ContentStripped

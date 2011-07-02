@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # xVector Engine
 # Copyright (c) 2011 James Buchwald
@@ -22,8 +22,6 @@ distutils setup script for the client and map editor
 """
 
 import os
-import gettext
-gettext.install("xVClient", "locales")
 from xVClient import ClientVersion
 
 from distutils.core import setup
@@ -60,12 +58,18 @@ setup(name='xVector',
       author_email='nullmech@xvector.org',
       url='http://www.xvector.org',
       license='GPLv2',
-      packages=['xVClient', 'xVMapEdit'],
-      requires=['xVLib', 'PyQt4(>=4.7)'],
-      provides=['xVClient', 'xVMapEdit'],
-      scripts=['xVClient/Client.py', 'xVMapEdit/MapEditor.py'],
+      packages=['xVClient', 'xVMapEdit', 'xVLib', 'xVServer'],
+      requires=['PyQt4(>=4.7)'],
+      provides=['xVClient', 'xVMapEdit', 'xVLib', 'xVServer'],
+      scripts=['xVClient/Client.py',
+               'xVMapEdit/MapEditor.py',
+               'xVClient/HTTPFetcher.py',
+              ],
       data_files=resources,
       cmdclass={},
-      windows=['xVClient/Client.py', 'xVMapEdit/MapEditor.py'],
+      windows=['xVClient/Client.py',
+               'xVMapEdit/MapEditor.py',
+               'xVClient/HTTPFetcher.py',
+              ],
       zipfile='core.dat',
       options={'py2exe':{'includes':['sip']}})

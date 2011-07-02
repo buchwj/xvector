@@ -24,11 +24,17 @@ from files.
 import struct
 
 # Some common basic structs that are very useful to have on hand
-UintStruct = struct.Struct("<I")
-"""Pre-made struct object for serialization of unsigned integers."""
+Uint32Struct = struct.Struct("<I")
+'''Pre-made struct object for serialization of unsigned 32-bit integers.'''
 
-SintStruct = struct.Struct("<i")
-"""Pre-made struct object for serialization of signed integers."""
+Sint32Struct = struct.Struct("<i")
+'''Pre-made struct object for serialization of signed 32-bit integers.'''
+
+Uint16Struct = struct.Struct("<H")
+'''Pre-made struct object for serialization of unsigned 16-bit integers.'''
+
+Sint16Struct = struct.Struct("<h")
+'''Pre-made struct object for serialization of signed 16-bit integers.'''
 
 def UnpackStruct(structobj, fileobj):
     """
@@ -69,7 +75,7 @@ def SerializeUTF8String(fileobj, string):
     width = len(toSerialize)
     
     # serialize
-    widthbin = UintStruct.pack(width)
+    widthbin = Uint32Struct.pack(width)
     stringbin = struct.pack("<%ds" % width, toSerialize)
     fileobj.write(widthbin)
     fileobj.write(stringbin)
@@ -91,7 +97,7 @@ def DeserializeUTF8String(fileobj, maxlen=0):
     @return: The deserialized Unicode string.
     """
     # figure out what we're deserializing
-    widthbin = UnpackStruct(UintStruct, fileobj)
+    widthbin = UnpackStruct(Uint32Struct, fileobj)
     
     # deserialize the string
     stringstruct = struct.Struct("<%ds" % widthbin)
@@ -108,28 +114,141 @@ def DeserializeUTF8String(fileobj, maxlen=0):
     return decoded
 
 
-def SerializeUint(streamobj, uint):
+def SerializeUint32(streamobj, uint):
     """
-    Serializes an unsigned integer to a stream.
+    Serializes an unsigned 32-bit integer to a stream.
     
     @type streamobj: stream
     @param streamobj: Stream object (such as a file) to write to.
     
-    @type uint: unsigned integer
-    @param uint: Unsigned integer to write to stream.
+    @type uint: unsigned 32-bit integer
+    @param uint: Unsigned 32-bit integer to write to stream.
     """
-    tmpstr = UintStruct.pack(uint)
+    tmpstr = Uint32Struct.pack(uint)
     streamobj.write(tmpstr)
 
 
-def DeserializeUint(streamobj):
+def DeserializeUint32(streamobj):
     """
-    Deserializes an unsigned integer from a stream.
+    Deserializes an unsigned 32-bit integer from a stream.
     
     @type streamobj: stream
     @param streamobj: Stream object (such as a file) to read from.
     
-    @return: Unsigned integer that was read from the stream.
+    @return: Unsigned 32-bit integer that was read from the stream.
     """
-    tmpstr = streamobj.read(UintStruct.size)
-    return UintStruct.unpack(tmpstr)[0]
+    tmpstr = streamobj.read(Uint32Struct.size)
+    return Uint32Struct.unpack(tmpstr)[0]
+
+
+def SerializeSint32(streamobj, sint):
+    '''
+    Serializes a signed 32-bit integer to a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to write to.
+    
+    @type sint: signed 32-bit integer
+    @param sint: Signed 32-bit integer to write to stream.
+    '''
+    tmpstr = Sint32Struct.pack(sint)
+    streamobj.write(tmpstr)
+
+
+def DeserializeSint32(streamobj):
+    '''
+    Deserializes a signed 32-bit integer from a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to read from.
+    
+    @return: Signed 32-bit integer that was read from the stream.
+    '''
+    tmpstr = streamobj.read(Sint32Struct.size)
+    return Sint32Struct.unpack(tmpstr)
+
+
+def SerializeUint16(streamobj, uint):
+    '''
+    Serializes an unsigned 16-bit integer to a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to write to.
+    
+    @type uint: unsigned 16-bit integer
+    @param uint: unigned 16-bit integer to write to stream.
+    '''
+    tmpstr = Uint16Struct.pack(uint)
+    streamobj.write(tmpstr)
+
+
+def DeserializeUint16(streamobj):
+    '''
+    Deserializes an unsigned 16-bit integer from a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to read from.
+    
+    @return: Unsigned 16-bit integer that was read from the stream.
+    '''
+    tmpstr = streamobj.read(Uint16Struct.size)
+    return Uint16Struct.unpack(tmpstr)
+
+
+def SerializeSint16(streamobj, sint):
+    '''
+    Serializes a signed 16-bit integer to a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to write to.
+    
+    @type sint: signed 16-bit integer
+    @param sint: Signed 16-bit integer to write to stream.
+    '''
+    tmpstr = Sint16Struct.pack(sint)
+    streamobj.write(tmpstr)
+
+
+def DeserializeSint16(streamobj):
+    '''
+    Deserializes a signed 16-bit integer from a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to read from.
+    
+    @return: Signed 16-bit integer that was read from the stream.
+    '''
+    tmpstr = streamobj.read(Sint16Struct.size)
+    return Sint16Struct.unpack(tmpstr)
+
+
+def SerializeBinary(streamobj, binary):
+    '''
+    Serializes a chunk of binary data to a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to write to.
+    
+    @type binary: str
+    @param binary: Binary data to write to the stream.
+    '''
+    binlen = len(binary)
+    binstruct = struct.Struct("<%ds" % binlen)
+    tmpstr = binstruct.pack(binary)
+    SerializeUint32(streamobj, binlen)
+    streamobj.write(tmpstr)
+
+
+def DeserializeBinary(streamobj):
+    '''
+    Deserializes a chunk of binary data from a stream.
+    
+    @type streamobj: stream
+    @param streamobj: Stream object (such as a file) to read from.
+    
+    @return: Binary data read from the stream.
+    '''
+    binlen = DeserializeUint32(streamobj)
+    binstruct = struct.Struct("<%ds" % binlen)
+    tmpstr = streamobj.read(binlen)
+    return binstruct.unpack(tmpstr)

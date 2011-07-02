@@ -1,8 +1,10 @@
-#Fri Jun 03 13:26:56 EDT 2011
+#Thu Jun 23 22:04:22 EDT 2011
 eclipse.preferences.version=1
 encoding//xVClient/MapRender.py=utf-8
 encoding//xVClient/Sprite.py=utf-8
+encoding//xVLib/Directories.py=utf-8
 encoding//xVLib/Maps.py=utf-8
+encoding//xVLib/Networking.py=utf-8
 encoding//xVMapEdit/MapEditorAboutUI.py=utf-8
 encoding//xVMapEdit/MapEditorUI.py=utf-8
 encoding//xVMapEdit/MapEditor_rc.py=utf-8
