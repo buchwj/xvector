@@ -21,18 +21,51 @@
 Contains the base networking code extended in the client and server.
 '''
 
-import asyncore
-import zlib
+import time
 
-class BaseConnection(asyncore.dispatcher_with_send):
+class BaseConnectionHandler(object):
     '''
-    The base class of all Connection objects.
+    The base class of all ConnectionHandler objects.
     
-    This is a simple wrapper around Python's asyncore module.
-    We don't actually handle any network operations aside from send() in
-    the base class; the asyncore callback methods must still be implemented
-    in the subclasses.  What the base class does provide is an interface for
-    writing to network sockets with optional compression and other features
-    not already built into the asyncore module.
+    This is an interface which defines the high-level interface of callbacks
+    used to send and receive packets.  Actual sending and receiving of data is
+    handled at a lower level by specific classes in xVClient and xVServer.  The
+    two packages use different network APIs (asyncore in xVClient, gevent in
+    xVServer) so we use a ConnectionHandler to abstract high-level network code
+    and avoid compatibility issues between the two APIs.
     '''
+    def __init__(self):
+        '''
+        Creates a new BaseConnection object.
+        '''
+        
+        # Set up our initial timeout tracker.
+        self.last_activity = time.time()
+        '''Time at which last network activity occurred.'''
     
+    ##
+    ## interface methods... subclasses should implement these
+    ##
+    
+    def PacketReceived(self, packet):
+        '''
+        Callback method called when a full packet is received and decoded.
+        
+        Must be reimplemented by all subclasses.
+        
+        @type packet: xVLib.Networking.Packet
+        @param packet: Packet received from the network.
+        '''
+        # no behavior in the base class; subclasses must implement this
+        pass
+    
+    def SendPacket(self, packet):
+        '''
+        Queues a packet to be sent over the connection.  Non-blocking.
+        
+        Must be reimplemented by all subclasses.
+        
+        @type packet: xVLib.Networking.Packet
+        @param packet: Packet to send over the connection.
+        '''
+        pass    # TODO: Implement

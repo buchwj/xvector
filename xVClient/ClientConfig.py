@@ -22,7 +22,6 @@ Manages the options file for the client.
 import ConfigParser
 
 from xVClient import ClientPaths
-from xVLib.General import Property
 
 # Constants
 MAIN_SECTION = "Options"
@@ -132,24 +131,12 @@ class ClientConfig(object):
     @property
     def fullscreen(self):
         """If true, the game will run in fullscreen mode."""
-        def fget(self):
-            return self.GetBoolOption("fullscreen")
-        def fset(self,new_val):
-            self.SetOption("fullscreen", new_val)
-            self.Save()
-        def fdel(self):
-            self.parser.remove_option(MAIN_SECTION, "fullscreen")
+        return self.GetBoolOption("fullscreen")
     
-    @property
-    def locale(self):
-        """The locale in use by the client."""
-        def fget(self):
-            return self.GetOption("locale")
-        def fset(self,new_val):
-            self.SetOption("locale", new_val)
-            self.Save()
-        def fdel(self):
-            self.parser.remove_option(MAIN_SECTION, "locale")
+    @fullscreen.setter
+    def fullscreen(self, new_val):
+        self.SetOption("fullscreen", new_val)
+        self.Save()
 
 
 # Okay, let's set up the cross-module support!

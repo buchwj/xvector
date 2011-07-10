@@ -36,6 +36,9 @@ Uint16Struct = struct.Struct("<H")
 Sint16Struct = struct.Struct("<h")
 '''Pre-made struct object for serialization of signed 16-bit integers.'''
 
+class EndOfFile(IOError): pass
+'''Special version of IOError for use when EOF is encountered.'''
+
 def UnpackStruct(structobj, fileobj):
     """
     Reads and unpacks a struct from an open file object, performing needed
@@ -53,7 +56,7 @@ def UnpackStruct(structobj, fileobj):
     """
     tmpstr = fileobj.read(structobj.size)
     if len(tmpstr) != structobj.size:
-        raise IOError("Unexpected EOF reached while reading data.")
+        raise EndOfFile
     return structobj.unpack(tmpstr)
 
 
@@ -101,11 +104,7 @@ def DeserializeUTF8String(fileobj, maxlen=0):
     
     # deserialize the string
     stringstruct = struct.Struct("<%ds" % widthbin)
-    stringbin = fileobj.read(stringstruct.size)
-    if len(stringbin) != stringstruct.size:
-        # EOF
-        raise IOError("EOF reached during deserialization")
-    encoded = stringstruct.unpack(stringbin)[0]
+    encoded = UnpackStruct(stringstruct, fileobj)
     
     # decode and process the string
     decoded = encoded.decode('utf-8')
@@ -137,8 +136,7 @@ def DeserializeUint32(streamobj):
     
     @return: Unsigned 32-bit integer that was read from the stream.
     """
-    tmpstr = streamobj.read(Uint32Struct.size)
-    return Uint32Struct.unpack(tmpstr)[0]
+    return UnpackStruct(Uint32Struct, streamobj)
 
 
 def SerializeSint32(streamobj, sint):
@@ -164,8 +162,7 @@ def DeserializeSint32(streamobj):
     
     @return: Signed 32-bit integer that was read from the stream.
     '''
-    tmpstr = streamobj.read(Sint32Struct.size)
-    return Sint32Struct.unpack(tmpstr)
+    return UnpackStruct(Sint32Struct, streamobj)
 
 
 def SerializeUint16(streamobj, uint):
@@ -191,8 +188,7 @@ def DeserializeUint16(streamobj):
     
     @return: Unsigned 16-bit integer that was read from the stream.
     '''
-    tmpstr = streamobj.read(Uint16Struct.size)
-    return Uint16Struct.unpack(tmpstr)
+    return UnpackStruct(Uint16Struct, streamobj)
 
 
 def SerializeSint16(streamobj, sint):
@@ -218,8 +214,7 @@ def DeserializeSint16(streamobj):
     
     @return: Signed 16-bit integer that was read from the stream.
     '''
-    tmpstr = streamobj.read(Sint16Struct.size)
-    return Sint16Struct.unpack(tmpstr)
+    return UnpackStruct(Sint16Struct, streamobj)
 
 
 def SerializeBinary(streamobj, binary):
@@ -250,5 +245,12 @@ def DeserializeBinary(streamobj):
     '''
     binlen = DeserializeUint32(streamobj)
     binstruct = struct.Struct("<%ds" % binlen)
-    tmpstr = streamobj.read(binlen)
-    return binstruct.unpack(tmpstr)
+    return UnpackStruct(binstruct, streamobj)
+
+
+SerializeASCII = SerializeBinary
+'''Function alias for ASCII serialization; no different from binary data.'''
+
+
+DeserializeASCII = DeserializeBinary
+'''Function alias for ASCII deserialization; same as binary data.'''

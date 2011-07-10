@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+
+<!--
+  This is the default configuration file for the xVector Engine Server.
+  All standard options are documented here; please read the comments above
+  the option before you change it.
+  
+  Please remember that all element names and argument names are case-sensitive.
+  If you want to use the default value, simply set the value in the file to
+  "!!default!!"; the server will replace any instance of "!!default!!" with the
+  default value.  This is good for using default values that differ between
+  platforms (i.e. directory paths, etc.)
+  -->
+
+<ServerConfiguration>
+
+    <!--
+      Network Settings
+      
+      This section contains basic settings for how the server uses the network. 
+      -->
+    <Network>
+        <!--
+          The server will bind to this address.
+          In most cases you will want to leave Interface as "0.0.0.0"; this
+          will allow the server to listen on all network interfaces.
+          You will also probably want to leave Port as "24020"; this is the
+          default port.
+          
+          Default values:
+            Interface="0.0.0.0"
+            Port="24020"
+          
+          Accessed from the code as:
+            Network.Address.Interface
+            Network.Address.Port
+          -->
+        <Address Interface="0.0.0.0" Port="24020" />
+        
+        <!--
+          This is the maximum number of connections the server will accept.
+          Set this to whatever you feel like (at least 1, no more than about
+          two billion).  Of course, if you actually manage to get a million
+          connections, a single server probably can't handle it.
+          
+          Default value:
+            Max="50"
+          
+          Accessed from the code as:
+            Network.Connections.Max
+          -->
+        <Connections Max="50" />
+    </Network>
+    
+    <!--
+      Log Settings
+      
+      This section allows you to customize how and where the server stores its
+      log files.
+      -->
+    <Logging>
+        <!--
+          This is the directory to which all log files are stored.
+          It can be either an absolute or relative path.
+          The user account under which the server is running must be able to
+          write to this directory.
+          
+          Default value:
+            Path="!!default!!"
+              which is the same as:
+                Windows: "logs"
+                Linux: "/var/log/xvector"
+          
+          Accessed from the code as:
+            Logging.Directory.Path 
+          -->
+        <Directory Path="!!default!!" />
+        
+        <!--
+          This controls the behavior of the log file rotator.
+          The rotator ensures that logs do not overflow and flood the system;
+          it enforces a maximum log size and keeps a given number of old logs.
+          Both the maximum size and number of old logs are set here.  The size
+          is given in bytes (1024 bytes = 1 KB, 1024 KB = 1 MB).
+          
+          Default value:
+            MaxSize="4194304"   (4 MB)
+            LogCount="10"
+          
+          Accessed from the code as:
+            Logging.Rotator.MaxSize
+            Logging.Rotator.LogCount
+          -->
+        <Rotator MaxSize="4194304" LogCount="10" />
+          
+    </Logging>
+</ServerConfiguration>

@@ -29,16 +29,16 @@ asynchronously (without blocking the GUI event loop).
 Usage:
     $ ./HTTPFetcher.py <<host>> <<port>> <<basedir>>
 
-    To update a file, write mapname and newline to stdin.
-    If update successful, CRC32 checksum of file is written to stdout (with \n).
-    If update fails, the HTTP error code is written to stderr (with newline).
-        If the error was not HTTP related, the error code is -1.
+To update a file, write mapname and newline to stdin.
+If update successful, CRC32 checksum of file is written to stdout (with
+newline). If update fails, the HTTP error code is written to stderr
+(with newline). If the error was not HTTP related, the error code is -1.
     
-    Requested resources must not begin with a slash or contain ".." anywhere in
-    the path.  In addition, they can only contain letters, numbers, spaces, and
-    the following characters: _-()./
-    Resources requested which do not match these restrictions will not be
-    retrieved, and an error code of -1 will be written to stderr.
+Requested resources must not begin with a slash or contain ".." anywhere in
+the path.  In addition, they can only contain letters, numbers, spaces, and
+the following characters: _-()./
+Resources requested which do not match these restrictions will not be
+retrieved, and an error code of -1 will be written to stderr.
 '''
 
 import sys

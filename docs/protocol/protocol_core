@@ -84,6 +84,22 @@ body of the packet may be compressed using zlib (deflate); if this is the case,
 it will be indicated in the packet header.
 
 
+--------------------------
+ UTF-8 and Binary Strings
+--------------------------
+
+Many packet types in this protocol require the use of either UTF-8 or binary
+strings.  The protocol defines a common encoding structure for these types
+which allows for variable-length strings.  This structure is described below.
+
+:: Variable-Length String Structure ::
+
+ Type       Field
+-----------------------
+ uint32     length of string (bytes)
+ bytes      string (sequence of bytes with the given length)
+
+
 ---------------
  Packet Header
 ---------------
@@ -154,6 +170,21 @@ described below:
  Value      Flag
 -----------------------------
    1        body is zlib compressed if set
+
+
+------------------
+ zlib compression
+------------------
+
+If the zlib compression flag is set in the header, the entire packet body is
+zlib-compressed.  This is stored in the packet in a sort of "meta-body", the
+structure of which is described below.
+
+:: zlib meta-body structure ::
+
+ Type       Field
+-----------------------------
+ binary     compressed data
 
 
 ---------------------------

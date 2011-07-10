@@ -22,7 +22,7 @@ Contains classes that represent maps and parts of maps.
 """
 
 import struct
-from xVLib import Heap, BinaryStructs
+from xVLib import BinaryStructs
 
 #
 # MAPS
