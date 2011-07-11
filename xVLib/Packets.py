@@ -146,19 +146,16 @@ class Packet(object):
         packetwriter.close()
         return retval
     
-    def DecodeFromData(self, data):
+    def DecodeFromData(self, stream):
         '''
-        Decodes a packet from data.
+        Decodes a packet from a data stream.
         
-        @type data: Binary data
-        @param data: Data from which to decode the packet.
+        @type stream: Stream (file-like) object
+        @param stream: Stream from which to decode the packet.
         
         @raise IncompletePacket: Raised if not enough data is present.
         @raise CorruptPacket: Raised if the data is invalid.
         '''
-        # Wrap the buffer in a string.
-        stream = cStringIO.StringIO(data)
-        
         # Read in the header.
         try:
             ph_type = BinaryStructs.DeserializeUint16(stream)
@@ -278,3 +275,30 @@ def InitPackets():
     '''
     # populate the packet type mapper
     pass    # TODO: Implement
+
+
+def BuildPacketFromStream(stream):
+    '''
+    Attempts to build a packet from a data stream.
+    
+    @raise IncompletePacket: Raised if not enough data is present.
+    @raise CorruptPacket: Raised if something is wrong with the data.
+    
+    @return: A Packet object, or an object of a Packet subclass.
+    '''
+    # try peeking ahead at the packet type
+    try:
+        startpos = stream.tell()
+        type = BinaryStructs.DeserializeUint16(stream)
+        stream.seek(startpos)
+    except:
+        # not enough data (really? you called this on ONE BYTE?)
+        raise IncompletePacket
+    
+    # now build up a packet of the appropriate type
+    PacketProto = PacketTypes[type]
+    NewPacket = PacketProto()
+    
+    # and now fill in the packet with the data...
+    NewPacket.DecodeFromData(stream)
+    return NewPacket

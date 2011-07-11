@@ -41,15 +41,41 @@
           This is the maximum number of connections the server will accept.
           Set this to whatever you feel like (at least 1, no more than about
           two billion).  Of course, if you actually manage to get a million
-          connections, a single server probably can't handle it.
+          connections, a single server probably can't handle it.  You can also
+          limit the number of connections that can be made from a single IP
+          address.
           
-          Default value:
+          Default values:
             Max="50"
+            PerIP="2"
           
           Accessed from the code as:
             Network.Connections.Max
+            Network.Connections.PerIP
           -->
-        <Connections Max="50" />
+        <Connections Max="50" PerIP="2" />
+        
+        <!--
+          This is an advanced setting that allows some fine-tuning of the
+          underlying network engine.  Generally you won't want to mess with
+          this, but high-load servers may find these options useful.
+          
+          Currently the only fine-tuning option is UsePoll, which switches the
+          method used to scan the network for data.  By default this is False,
+          as Poll is not supported on all platforms and doesn't give a huge
+          performance boost for small servers (in fact, it can have a slight
+          negative effect on some small servers).  If, however, you run a
+          heavily-loaded server, you may want to consider setting this to True
+          to get a performance boost.  Please note that this option is not
+          supported on Windows.
+          
+          Default values:
+            UsePoll="False"
+          
+          Accessed from the code as:
+            Network.Engine.UsePoll
+          -->
+        <Engine UsePoll="False" />
     </Network>
     
     <!--

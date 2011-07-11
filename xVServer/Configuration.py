@@ -35,17 +35,39 @@ import copy
 
 mainlog = logging.getLogger("Server.Main")
 
-DefaultValues = {
+_DefaultValues = {
                  # Network section
                  'Network.Address.Interface': u'0.0.0.0',
-                 'Network.Address.Port': u'24020',
-                 'Network.Connections.Max': u'50',
+                 'Network.Address.Port': 24020,
+                 'Network.Connections.Max': 50,
+                 'Network.Connections.PerIP': 2,
+                 'Network.Engine.UsePoll': False,
                  
                  # Logging section
                  'Logging.Directory.Path': ServerGlobals.DefaultLogsPath,
-                 'Logging.Rotator.MaxSize': u'4194304',
-                 'Logging.Rotator.LogCount': u'10',
+                 'Logging.Rotator.MaxSize': 4194304,
+                 'Logging.Rotator.LogCount': 10,
                  }
+
+def _NullTransformer(value): return value
+_IntTransformer = int
+def _BoolTransformer(value): 
+    if value.tolower() == "true": return True
+    return False
+
+_KnownTransformers = {
+                      # Network section
+                      'Network.Address.Interface': _NullTransformer,
+                      'Network.Address.Port': _IntTransformer,
+                      'Network.Connections.Max': _IntTransformer,
+                      'Network.Connections.PerIP': _IntTransformer,
+                      'Network.Engine.UsePoll': _BoolTransformer,
+                      
+                      # Logging section
+                      'Logging.Directory.Path': _NullTransformer,
+                      'Logging.Rotator.MaxSize': _IntTransformer,
+                      'Logging.Rotator.LogCount': _IntTransformer,
+                      }
 
 class _MainConfigurationParser(object):
     '''
@@ -57,7 +79,7 @@ class _MainConfigurationParser(object):
         '''Handle to the expat parser.'''
         self.ParentElements = []
         '''Stack of parent elements.'''
-        self.ParsedConfig = copy.copy(DefaultValues)
+        self.ParsedConfig = copy.copy(_DefaultValues)
         '''Parsed configuration values.'''
         
         # Attach the callbacks.
@@ -74,9 +96,9 @@ class _MainConfigurationParser(object):
         # parse the file
         with file(filepath, 'r') as fileobj:
             self.parser.ParseFile(fileobj)
-        
-        # expand the "!!default!!" values
-        self.ReplaceDefaultTags()
+            
+        # run platform validation 
+        self.PlatformValidation()
     
     def _GetPropName(self, attribute):
         '''
@@ -99,10 +121,26 @@ class _MainConfigurationParser(object):
         if name == "ServerConfiguration":
             # nope
             return
+        
+        # record the element
         self.ParentElements.append(name)
         for name, value in attributes.iteritems():
             PropName = self._GetPropName(name)
-            self.ParsedConfig[PropName] = value
+            # is the default being used?
+            if value == "!!default!!":
+                if PropName in _DefaultValues:
+                    self.ParsedConfig[PropName] = _DefaultValues[PropName]
+                    continue
+            # can we validate/convert the type?
+            if PropName in _KnownTransformers:
+                try:
+                    tvalue = _KnownTransformers[PropName](value)
+                except:
+                    # invalid value
+                    raise ValueError("invalid value for option %s" % name)
+            else:
+                tvalue = value
+            self.ParsedConfig[PropName] = tvalue
     
     def EndElementHandler(self, name):
         '''
@@ -114,16 +152,19 @@ class _MainConfigurationParser(object):
             return
         self.ParentElements.remove(name)
     
-    def ReplaceDefaultTags(self):
+    def PlatformValidation(self):
         '''
-        Replaces the "!!default!!" values with appropriate values.
+        Runs platform validation on values.
         '''
-        for prop, value in self.ParsedConfig.iteritems():
-            if value == "!!default!!":
-                # Does this property have a default value?
-                if prop in DefaultValues:
-                    self.ParsedConfig[prop] = DefaultValues[prop]
-
+        # Network.Engine.UsePoll not supported on all platforms
+        if self.ParsedConfig['Network.Engine.UsePoll']:
+            try:
+                from select import poll
+            except ImportError:
+                # Not supported
+                msg = "Your platform does not support poll; not using poll."
+                mainlog.warning(msg)
+                self.ParsedConfig['Network.Engine.UsePoll'] = False
 
 def LoadConfigFile(filepath):
     '''
@@ -139,6 +180,12 @@ def LoadConfigFile(filepath):
         
         # okay, if we got this far without an exception, we're all good
         return parser.ParsedConfig
+    except ValueError as err:
+        # failed the validation/transformation
+        args = (filepath, err[1])
+        msg = "While loading configuration file %s: %s" % args
+        mainlog.log(logging.ERROR, msg)
+        return None
     except IOError as err:
         # something went wrong low-level
         args = (filepath, err[1])

@@ -25,47 +25,37 @@ background when the I/O green threads are blocking.  It is guaranteed to yield
 to other green threads at least once per cycle.
 '''
 
-from gevent import Greenlet, sleep
 import logging
 import traceback
+
+from xVServer import ServerNetworking
 
 class MainLoopEnd(Exception): pass
 '''Raised when the main loop is gracefully terminated.'''
 
 mainlog = logging.getLogger("Server.Main")
 
-class MainLoopThread(Greenlet):
+def MainLoop():
     '''
-    Greenlet that runs the main processing loop of the server.
+    Main processing loop of the server.
     '''
-    
-    def __init__(self):
-        '''
-        Initializes the new greenlet.
-        '''
-        # Inherit base class behavior.
-        Greenlet.__init__(self)
-
-    def _run(self):
-        '''
-        Main processing loop of the server.
-        '''
-        mainlog.warning("Main loop launching!")
-        # enter loop
-        try:
-            mainlog.warning("In try block...")
-            while 1:
-                # do processing stuff
-                
-                # yield to other green threads
-                mainlog.warning("About to sleep...")
-                sleep(0)
-                mainlog.warning("Done sleeping...")
-        except MainLoopEnd:
-            # looks like we're done... clean up here
-            pass    # TODO: Implement
-        except:
-            # UNHANDLED FATAL EXCEPTION!
-            msg = "Unhandled exception in main loop.\n\n"
-            msg += traceback.format_exc()
-            mainlog.log(logging.FATAL, msg)
+    # enter loop
+    mainlog.info("Server started.")
+    try:
+        while 1:
+            # poll the network
+            ServerNetworking.PollNetwork()
+    except KeyboardInterrupt:
+        # server interrupted... clean up after the try block
+        pass
+    except MainLoopEnd:
+        # looks like we're done... clean up after the try block
+        pass
+    except:
+        # UNHANDLED FATAL EXCEPTION!
+        msg = "Unhandled exception in main loop.\n\n"
+        msg += traceback.format_exc()
+        mainlog.log(logging.FATAL, msg)
+    finally:
+        # clean up
+        mainlog.info("Server shutting down.")

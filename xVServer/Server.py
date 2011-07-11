@@ -21,14 +21,10 @@
 Main script for the server.
 '''
 
-# MONKEY PATCHING!!!
-from gevent import monkey; monkey.patch_all()
-
-from gevent.pool import Pool
-from gevent.server import StreamServer
 import sys
 import os
 import logging
+import traceback
 from logging import handlers
 from xVServer import ServerGlobals, Configuration, MainLoop, ServerNetworking
 
@@ -45,7 +41,9 @@ class ServerApplication(object):
     '''
     def __init__(self):
         '''Initializes a new server application.'''
-        # declare CLI configuration attributes
+        #
+        # CLI configuration attributes
+        #
         self.ConfigFilePath = ServerGlobals.DefaultConfigPath
         '''Path to the main configuration file.'''
         self.DaemonMode = False
@@ -63,11 +61,13 @@ class ServerApplication(object):
         self.EarlyHandler = None
         '''Early log handler.'''
         
-        # now our greenthreads and stuff like that...
-        self.MainLoopThread = None
-        '''Greenthread in which the main processing loop runs.'''
-        self.NetworkPool = None
-        '''Greenlet pool containing all of the connection handlers.'''
+        #
+        # High-level network objects
+        #
+        self.Connections = None
+        '''Main connection manager.'''
+        self.Server = None
+        '''Network listening server.'''
         
         # set up early logging support
         self.EarlyHandler = logging.StreamHandler()
@@ -292,6 +292,33 @@ class ServerApplication(object):
         with context:
             return self._Run_Core()
 
+    def InitNetwork(self):
+        '''Initializes the network.'''
+        # create the connection manager
+        try:
+            self.Connections = ServerNetworking.ConnectionManager()
+        except:
+            msg = "Could not create connection manager; server cannot start."
+            mainlog.critical(msg)
+            raise _EarlyServerExit
+        
+        # now initialize the listening socket
+        try:
+            self.Server = ServerNetworking.NetworkServer()
+        except ServerNetworking.NetworkStartupError:
+            msg = "Could not create network server; server cannot start."
+            mainlog.critical(msg)
+            raise _EarlyServerExit
+        except:
+            msg = "Unhandled exception while creating network server.\n\n"
+            msg += traceback.format_exc()
+            mainlog.critical(msg)
+            raise _EarlyServerExit
+    
+    def CleanupNetwork(self):
+        '''Cleans up after the network.'''
+        pass    # TODO: Implement
+
     def Run(self):
         '''Runs the application.'''        
         try:
@@ -318,14 +345,18 @@ class ServerApplication(object):
         # configure the logger
         self.ConfigureLogger()
         
-        # create the main loop greenlet
-        self.MainLoopThread = MainLoop.MainLoopThread()
-        self.MainLoopThread.start()
+        # set up the network
+        try:
+            self.InitNetwork()
+        except _EarlyServerExit:
+            # bail out
+            return -1
         
-        # create the network greenlet pool
-        self.MainLoopThread.join()
+        # enter the main loop
+        MainLoop.MainLoop()
         
         # clean up
+        self.CleanupNetwork()
         logging.shutdown()
         
         # exit successfully

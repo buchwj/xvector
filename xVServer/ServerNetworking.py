@@ -23,66 +23,117 @@ Server-specific network code.
 
 import logging
 import traceback
+import asyncore
+import socket
+import cStringIO
 
 from xVLib import Networking, Packets
 from xVServer import ServerGlobals
-from gevent.select import select
-from gevent.pool import Pool
-from gevent.server import StreamServer
-from gevent import socket
 
 # stuff we use later
-App = ServerGlobals.Application
 mainlog = logging.getLogger("Server.Main")
 
 class ConnectionClosed(Exception): pass
 '''Raised when a connection is closed.'''
 
 
-class ServerConnectionHandler(Networking.BaseConnectionHandler):
+class ServerConnection(asyncore.dispatcher_with_send):
     '''
-    Server-side connection handler which interfaces with gevent.
+    Server-side connection handler for a single connection.
+    
+    Although not explicitly inheriting from it, this class implements the
+    xVLib.BaseConnectionHandler interface.
     '''
-    def __init__(self, sock=None, addr=None):
+    def __init__(self, sock=None, map=None):
         '''
         Creates a new server-side connection handler.
         
-        @type sock: gevent.socket.socket
+        @type sock: socket
         @param sock: Connected socket to wrap
         
-        @type addr: network address tuple
-        @param addr: Network address of remote machine
+        @type map: dict
+        @param map: Tracking structure for asyncore.
         '''
         # inherit base class behavior
-        super(ServerConnectionHandler, self).__init__()
+        asyncore.dispatcher_with_send.__init__(self, sock, map)
         
-        # declare our attributes
+        # declare our network attributes
         self.sock = sock
         '''Socket connected to the remote machine.'''
         
-        self.addr = addr
+        self.Address = sock.getpeername()
         '''Network address of the remote machine.'''
         
-        # create the buffers
-        self.RecvBufer = b""
+        # create the buffer
+        self.RecvBuffer = b""
         '''Buffer of received data; packets are built from this.'''
+    
+    def _TryPacketBuild(self):
+        '''Tries to build a packet from the read buffer.'''
+        # Make sure the buffer isn't empty.
+        if len(self.RecvBuffer) == 0:
+            # Empty.
+            raise Packets.IncompletePacket
+        try:
+            # wrap the buffer in a stream
+            BufferStream = cStringIO.StringIO(self.RecvBuffer)
         
-        self.SendBuffer = b""
-        '''Buffer of sent data.'''
+            # try to build the packet
+            NewPacket = Packets.BuildPacketFromStream(BufferStream)
+        
+            # If we get here, it worked.  Drop the data from the buffer.
+            PacketEnd = BufferStream.tell()
+            self.RecvBuffer = self.RecvBuffer[PacketEnd:]
+            
+            return NewPacket
+        except:
+            # re-raise the exception
+            raise
+        finally:
+            BufferStream.close()
+    
+    ##
+    ## connection information properties
+    ##
+    
+    @property
+    def AccountName(self):
+        '''Read-only property for accessing the connected account's name.'''
+        return None     # TODO: Implement
+    
+    @property
+    def CharacterName(self):
+        '''Read-only property for accessing the connected character's name.'''
+        return None     # TODO: Implement
     
     ##
     ## reimplemented methods from Networking.BaseConnectionHandler
     ##
+    
     def SendPacket(self, packet):
-        pass    # TODO: Implement
+        '''
+        Reimplmented from xVLib.Networking.BaseConnectionHandler.
+        
+        All we do here is convert the packet to binary and add it to the
+        outgoing data queue.  Nothing fancy.
+        '''
+        # get the packet data and send it
+        data = packet.GetBinaryForm()
+        self.send(data)
     
     def PacketReceived(self, packet):
+        '''
+        Reimplemented from xVLib.Networking.BaseConnectionHandler.
+        
+        Here we pass the packet to the appropriate handler.  Again, nothing
+        special.  This is essentially just a routing method.
+        '''
         pass    # TODO: Implement
     
     ##
     ## low-level callbacks
     ##
-    def OnReadable(self):
+    def handle_read(self):
         '''
         Called when connection data can be read.
         
@@ -90,102 +141,312 @@ class ServerConnectionHandler(Networking.BaseConnectionHandler):
         then attempts to build a packet from the data.  If it succeeds, it
         calls the PacketReceived() callback method and removes the data from
         the buffer.
-        '''
-        pass    # TODO: Implement
-    
-    def OnWritable(self):
-        '''
-        Called when data can be written to the socket.
         
-        This method writes as much data from the write buffer as it can, then
-        removes the data from the write buffer.
+        This is a reimplemented callback method from dispatcher_with_send.
         '''
-        pass    # TODO: Implement
-    
-    def OnClose(self):
-        '''
-        Called when the connection is closed.
+        # receive data, append to buffer
+        data = self.recv(8192)
+        self.RecvBuffer += data
         
-        When this is called, you should assume that the socket has already
-        been closed.  This method is only for cleanup after the connection
-        has ended.
+        # try building packets
+        try:
+            # this will loop until there are no more packets in the buffer
+            while 1:
+                NewPacket = self._TryPacketBuild()
+                self.PacketReceived(NewPacket)
+        except Packets.IncompletePacket:
+            # Buffer is as cleared as possible... good.
+            pass
+        except Packets.CorruptPacket:
+            # Corrupt packet? Hmm... better log this.
+            mainlog.error("%s - Corrupt packet received." % self.Address[0])
+            # And, of course, kill the connection! Bad connection! BAD!
+            self.close()
+        except:
+            # Unhandled exception?
+            msg = self.Address[0] + " - Unhandled exception while reading "
+            msg += "data.\n"
+            msg += traceback.format_exc()
+            mainlog.error(msg)
+            # Better close the connection just to be safe.
+            self.close()
+    
+    def handle_close(self):
         '''
-        pass    # TODO: Implement
+        Called when the connection is closed by the remote machine.
+        '''
+        self.close()
+    
+    ##
+    ## reimplemented methods from asyncore.dispatcher
+    ##
+    
+    def close(self):
+        '''
+        Closes the socket and cleans up.
+        
+        This extends the close() method of asyncore.dispatcher.
+        '''
+        # Inherit base class behavior.
+        asyncore.dispatcher_with_send.close(self)
+        
+        # The socket is now closed.
+        # Clean stuff up.
+        # TODO: Implement
 
 
-def ServerConnectionThread(sock, addr):
+class ConnectionLimitExceeded(Exception): pass
+'''Raised if the connection limit is exceeded.'''
+
+
+class UnregisteredConnection(Exception): pass
+'''Raised if a referenced connection is not registered with the manager.''' 
+
+
+class NameAlreadyInUse(Exception): pass
+'''Raised if an account or character name is already in use.'''
+
+
+class ConnectionManager(object):
     '''
-    Greenlet function for gevent which handles a server network connection.
+    Manages the set of server connections.
     
-    All this does is map the green socket to the appropriate callback methods
-    in the ServerConnectionHandler class; it also is responsible for creating
-    the handler object.
+    This class exposes a set of data structures useful for rapid lookup of
+    connections.  The individual connections are responsible for registering
+    themselves appropriately.
+    
+    Note that a connection does not have to be registered with all indices at
+    once.  It MUST be registered with ConnectionSet and ByAddress, but the
+    others are only mandatory once they make sense for the connection.
     '''
-    # Log the connection and build a handler
-    mainlog.log(logging.INFO, "New connection from %s" % addr[0])
-    handler = ServerConnectionHandler(sock, addr)
-    # TODO: Register handler with the connection manager
+    def __init__(self):
+        '''Creates an empty connection manager.'''
+        # Create the master connection set.
+        self.ConnectionSet = set()
+        '''Set of all managed connections.'''
+        
+        # Create the lookup indices.
+        self.ByAddress = {}
+        '''Maps network address tuples to their connections.'''
+        self.ByAccountName = {}
+        '''Maps account names to their connections.'''
+        self.ByCharacterName = {}
+        '''Maps character names to their connections.'''
+        
+        # Create the tracking lists.
+        self.AddressConnectCount = {}
+        '''Maps address strings to the number of connections from them.'''
     
-    # Continuously poll the socket.
-    try:
-        socklist = [sock]
-        while 1:
-            ready = select(socklist, socklist, socklist, timeout=30.0)
-            
-            # What's going on?
-            readable, writable = ready[0:2]
-            rcount = len(readable)
-            wcount = len(writable)
-            if rcount == 0 and wcount == 0:
-                # Connection timed out.
-                sock.close()
-                raise ConnectionClosed
-            if rcount > 0:
-                # Data can be read from the socket.
-                handler.OnReadable()
-            if wcount > 0:
-                # Socket is writable.
-                handler.OnWritable() 
-    except ConnectionClosed:
-        # clean up the connection here
-        handler.OnClose()
-    except:
-        # unhandled exception
-        msg = "Unhandled exception in connection from %s\n\n" % addr[0]
-        msg += traceback.format_exc()
-        mainlog.log(logging.ERROR, msg)
-    finally:
-        mainlog.log(logging.INFO, "Connection closed from %s" % addr[0])
+    def AddConnection(self, conn):
+        '''Adds a connection.'''
+        # check that the connection isn't already added
+        if conn in self.ConnectionSet:
+            # already added, continue
+            return
+        
+        # now register the connection
+        App = ServerGlobals.Application
+        maxtotal = App.Config['Network.Connections.Max']
+        addr = conn.Address
+        if len(self.ConnectionSet) > maxtotal:
+            # Total connection limit exceeded
+            msg = "Too many total connections, rejecting from %s." % addr[0]
+            mainlog.warning(msg)
+            raise ConnectionLimitExceeded
+        self.ConnectionSet.add(conn)
+        
+        # check the address
+        maxip = App.Config['Network.Connections.PerIP']
+        if addr[0] in self.AddressConnectCount:
+            if self.AddressConnectCount[addr[0]] > maxip:
+                # Per-IP connection limit exceeded.
+                msg = "Too many connections from %s, rejecting." % addr[0]
+                mainlog.warning(msg)
+                raise ConnectionLimitExceeded
+            self.AddressConnectCount[addr[0]] += 1
+        else:
+            self.AddressConnectCount[addr[0]] = 1
+        self.ByAddress[addr] = conn
+    
+    def UpdateConnection(self, conn, oldAccount=None, oldChar=None):
+        '''
+        Updates a connection that has already been added.
+        
+        @type conn: ServerConnection
+        @param conn: Connection object to update in the manager.
+        
+        @type oldAccount: string
+        @param oldAccount: If set, the old account name to cancel.
+        
+        @type oldChar: string
+        @param oldChar: If set, the old character name to cancel.
+        
+        @raise NameAlreadyInUse: Raised if the account or character name is
+        already registered with a different connection.
+        '''
+        # ensure that the connection is registered
+        if conn not in self.ConnectionSet:
+            # not registered
+            addr = conn.Address[0]
+            msg = "Tried to update an unregistered connection from %s." % addr
+            mainlog.error(msg)
+            raise UnregisteredConnection
+        
+        # is there a change of account?
+        if conn.AccountName:
+            if conn.AccountName in self.ByAccountName:
+                if self.ByAccountName[conn.AccountName] != conn:
+                    # account already connected by other connection
+                    raise NameAlreadyInUse
+            else:
+                # register
+                self.ByAccountName[conn.AccountName] = conn
+        else:
+            if oldAccount:
+                # does this connection actually own that account?
+                try:
+                    if self.ByAccountName[oldAccount] == conn:
+                        # deregister
+                        del self.ByAccountName[oldAccount]
+                except:
+                    # we don't care about any key errors
+                    pass
+        
+        # is there a change of character?
+        if conn.CharacterName:
+            # we don't have to check for it to already be logged in since the
+            # character is tied to a single account
+            self.ByCharacterName[conn.CharacterName] = conn
+        else:
+            if oldChar:
+                try:
+                    del self.ByCharacterName[oldChar]
+                except:
+                    pass
+    
+    def RemoveConnection(self, conn):
+        '''
+        Removes a connection.
+        
+        @type conn: ServerConnection
+        @param conn: Connection to unregister
+        
+        @raise UnregisteredConnection: Raised if conn is not registered.
+        '''
+        # make sure the connection is registered
+        if conn not in self.ConnectionSet:
+            # not registered
+            addr = conn.Address[0]
+            msg = "Tried to remove an unregistered connection from %s." % addr
+            mainlog.error(msg)
+            raise UnregisteredConnection
+        addr = conn.Address[0]
+        
+        # remove the connection from the lookup tables
+        if conn.CharacterName:
+            try:
+                if self.ByCharacterName[conn.CharacterName] == conn:
+                    del self.ByCharacterName[conn.CharacterName]
+                else:
+                    args = (addr, conn.CharacterName)
+                    msg = "%s - Tried to deregister character %s not "
+                    msg += "associated with the connection."
+                    msg %= args
+                    mainlog.error(msg)
+            except:
+                pass
+        
+        if conn.AccountName:
+            try:
+                if self.ByAccountName[conn.AccountName] == conn:
+                    del self.ByAccountName[conn.AccountName]
+                else:
+                    args = (addr, conn.AccountName)
+                    msg = "%s - Tried to deregister account %s not associated "
+                    msg += "with the connection."
+                    msg %= args
+                    mainlog.error(msg)
+            except:
+                pass
+        
+        # remove the connection entirely
+        self.ConnectionSet.remove(conn)
+        try:
+            self.AddressConnectCount[addr] -= 1
+        except:
+            msg = "%s - Failed to decrement per-IP connection count." % addr
+            mainlog.error(msg)
 
 
 class NetworkStartupError(Exception): pass
 '''Raised if an error occurs while initializing the network server.'''
 
 
-class NetworkServer(object):
+class NetworkServer(asyncore.dispatcher):
     '''
-    Manages network resources for the server.
+    Listens for new incoming connections and assigns them to handlers.
     '''
     
-    def __init__(self, address):
-        '''Creates an empty server.'''
-        # gevent-related attributes
-        try:
-            self.ThreadPool = Pool(int(App.Config['Network.Connections.Max']))
-            '''Greenlet pool containing connection handlers.'''
-        except ValueError:
-            mainlog.critical("Maximum connection count must be positive.")
-            raise NetworkStartupError
+    def __init__(self):
+        '''Creates the network server and starts listening for connections.'''
+        # inherit base class behavior
+        asyncore.dispatcher.__init__(self)
         
-        # prep the server socket
+        # create the listening socket
+        App = ServerGlobals.Application
+        iface = App.Config['Network.Address.Interface']
+        port = App.Config['Network.Address.Port']
+        addr = (iface, port)
         try:
-            self.ServerSocket = socket.socket(socket.AF_INET,
-                                              socket.SOCK_STREAM)
-            self.ServerSocket.bind(address)
+            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.set_reuse_addr()
         except socket.error as err:
-            # something went wrong
-            msg = "Failed to create the listening socket: %s" % err.args[1]
+            msg = "Could not create listening socket: %s" % err.args[1]
             mainlog.critical(msg)
             raise NetworkStartupError
-            
+        
+        # bind to the network address and start listening
+        try:
+            self.bind(addr)
+        except socket.error as err:
+            msg = "Could not bind listening socket: %s" % err.args[1]
+            mainlog.critical(msg)
+            raise NetworkStartupError
+        try:
+            self.listen(5)
+        except socket.error as err:
+            msg = "Could not listen on listening socket: %s" % err.args[1]
+            mainlog.critical(msg)
+            raise NetworkStartupError
     
+    def handle_accept(self):
+        '''Called when a client is trying to connect.'''
+        # accept the connection
+        try:
+            pair = self.accept()
+        except socket.error as err:
+            # something went wrong
+            msg = "Failed to accept incoming connection: %s" % err.args[1]
+            mainlog.error(msg)
+            return
+        if not pair:
+            # apparently they're not trying to connect anymore...
+            return
+        
+        # wrap the connection
+        sock, addr = pair
+        conn = ServerConnection(sock)
+
+
+def PollNetwork():
+    '''
+    Polls the network and handles any network events that are pending.
+    
+    This should be called once per cycle of the main loop.
+    '''
+    # figure out what we're doing
+    App = ServerGlobals.Application
+    usepoll = App.Config['Network.Engine.UsePoll']
+    
+    # poll the network
+    asyncore.loop(timeout=0, count=1, use_poll=usepoll)
