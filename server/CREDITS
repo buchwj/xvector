@@ -1,0 +1,70 @@
+============================
+
+  xVector Engine
+  Authors & Credits
+  
+============================
+
+** THIS FILE MUST BE DISTRIBUTED WITH ALL COPIES OF THE CODE IN ANY FORM. **
+
+** Should you be on this list, but we've accidentally forgot?
+** Please send an email to buchwj@rpi.edu.
+
+---------
+ AUTHORS
+---------
+
+James Buchwald
+Project Founder, Lead Developer
+<buchwj@rpi.edu>
+
+
+---------
+ CREDITS
+---------
+
+** This section contains recognition of the authors of various resources
+** that were acquired from various sources on the Internet.
+** A big thanks to all of you.
+
+** Libraries **
+
+This software makes use of the PyQt4 library from Riverbank Computing Ltd.
+Licensed under the GNU GPL v2.  http://riverbankcomputing.com/software/pyqt
+
+This software makes use (via PyQt4) of the Qt 4 library from Nokia Inc.
+Licensed under the GNU LGPL v2.  http://qt.nokia.com
+
+
+** Misc. Code **
+
+xVLib/Directories.py contains code borrowed from ActiveState's "recipes"
+website.  http://code.activestate.com/recipes/82465/
+
+
+** Icons **
+The following icons found in xVMapEdit/res:
+	* document-new.png
+	* document-open.png
+	* document-save.png
+	* document-save-as.png
+	* edit-copy.png
+	* edit-cut.png
+	* edit-paste.png
+	* edit-undo.png
+	* edit-redo.png
+	* help-browser.png
+are borrowed from the GNOME Desktop Environment Icon Theme and are distributed
+under the Creative Commons BY-SA license.  Authors of the icons:
+	Ulisse Perusin <uli.peru@gmail.com>
+	Riccardo Buzzotta <raozuzu@yahoo.it>
+	Josef Vybíral <cornelius@vybiral.info>
+	Hylke Bons <h.bons@gmail.com>
+	Ricardo González <rick@jinlabs.com>
+	Lapo Calamandrei <calamandrei@gmail.com>
+	Rodney Dawes <dobey@novell.com>
+	Luca Ferretti <elle.uca@libero.it>
+	Tuomas Kuosmanen <tigert@gimp.org>
+	Andreas Nilsson <nisses.mail@home.se>
+	Jakub Steiner <jimmac@novell.com>
+(The icons were grabbed from the gnome-icon-theme package from Fedora 14.)

@@ -205,7 +205,7 @@ involved are described below.
 
  Byte       Type        Field
 -----------------------------------
-    0       uint16      protocol signature (0D D0 for official protocol)
+    0       uint16      protocol signature (A0 D0 for official protocol)
     2       uint16      protocol revision number
     4       uint16      engine major version number
     6       uint16      engine minor version number
@@ -224,8 +224,9 @@ involved are described below.
  Type        Field
 -----------------------
  uint8      login screen flags
- utf-8      server name
- utf-8      server news URL
+ utf-8      server name (max length = 64 characters)
+ utf-8      server news URL (max length = 256 characters)
+ utf-8      server update URL (max length = 256 characters)
 
 
 :: Body Structure, ConnectionRejected Packets ::
@@ -280,6 +281,7 @@ below.
  Value      Flag
 ---------------------
    1        Registration disabled
+   2        Auto-updates enabled (server update URL required)
 
 
 -----------

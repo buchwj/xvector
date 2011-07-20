@@ -46,10 +46,10 @@ def LOC(root='', recurse=True):
 ## end of http://code.activestate.com/recipes/527746/ }}}
 
 if __name__ == "__main__":
-    min1, max1 = LOC(root="xVClient")
-    min2, max2 = LOC(root="xVLib")
-    min3, max3 = LOC(root="xVMapEdit")
-    min4, max4 = LOC(root="xVServer")
+    min1, max1 = LOC(root="client/xVClient")
+    min2, max2 = LOC(root="xVLib/xVLib")
+    min3, max3 = LOC(root="mapeditor/xVMapEdit")
+    min4, max4 = LOC(root="server/xVServer")
     min = min1 + min2 + min3 + min4
     max = max1 + max2 + max3 + max4
     print "without comments + whitespace: ", min

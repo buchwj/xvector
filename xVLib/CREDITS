@@ -1,0 +1,34 @@
+===============================
+
+  xVector Engine Core Library
+  Authors & Credits
+  
+===============================
+
+** THIS FILE MUST BE DISTRIBUTED WITH ALL COPIES OF THE CODE IN ANY FORM. **
+
+** Should you be on this list, but we've accidentally forgot?
+** Please send an email to buchwj@rpi.edu.
+
+---------
+ AUTHORS
+---------
+
+James Buchwald
+Project Founder, Lead Developer
+<buchwj@rpi.edu>
+
+
+---------
+ CREDITS
+---------
+
+** This section contains recognition of the authors of various resources
+** that were acquired from various sources on the Internet.
+** A big thanks to all of you.
+
+
+** Misc. Code **
+
+xVLib/Directories.py contains code borrowed from ActiveState's "recipes"
+website.  http://code.activestate.com/recipes/82465/

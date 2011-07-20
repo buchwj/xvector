@@ -1,0 +1,55 @@
+===============================================
+ xVector Engine Map Editor
+ Copyright (c) 2011 James Buchwald
+ Code licensed under the GNU GPL v2
+ NO WARRANTY; see the license for details.
+  ---
+ Known Issues and Bugs
+===============================================
+
+----------
+ Contents
+----------
+
+1) General Issues
+2) Platform-Specific: Windows
+3) Platform-Specific: Linux
+
+
+-------------------
+ 1) General Issues
+-------------------
+
+I. Pre-Alpha Code
+	* All code is currently in a "pre-alpha" state.  As such, it is inherently
+	  unstable and more-or-less untested.  There will be bugs and issues in the
+	  code which are currently unknown and not listed here.
+
+
+-------------------------------
+ 2) Platform-Specific: Windows
+-------------------------------
+
+No issues specific to the Windows platform are currently known.
+
+
+-----------------------------
+ 3) Platform-Specific: Linux
+-----------------------------
+
+I. Minor graphical glitches in the map editor for some Linux installations
+    * An issue was found on certain Linux distros in which minor graphical
+	  errors occured in the map editor, particularly in the tile selector.
+	  Sometimes when selecting a new tile, the tile selector is not updated
+	  on screen correctly, and the wrong tile (or tiles, as the case may
+	  be) appears to be selected.  This issue could not be reproduced on the
+	  Windows platform.
+	* This appeared to be an intermittent problem caused by underlying bugs
+	  in the display system.  More specifically, it was only observed when
+	  using the Compiz window manager, version 0.8.6. The problem can be 
+	  resolved simply by restarting the display manager or computer.
+		* Another solution if you're using the Compiz window manager is to
+		  briefly switch to another window manager (e.g. Metacity) and then
+		  back; this is easy if the Compiz icon is on your screen, just right-
+		  click and use the "Select Window Manager" menu.
+    * This issue was not observed with Compiz version 0.9.4 on Fedora 15.
