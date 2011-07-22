@@ -27,13 +27,10 @@ at the following URL: http://stackoverflow.com/questions/375427/
 '''
 
 from subprocess import PIPE, Popen
-from threading  import Thread
+from threading  import Thread, Lock
 from warnings import warn
 
-try:
-    from Queue import Queue, Empty
-except ImportError:
-    from queue import Queue, Empty  # python 3.x
+from collections import deque
 
 class AsyncPopen(Popen):
     '''
@@ -59,6 +56,10 @@ class AsyncPopen(Popen):
         All of the arguments are the same as for subprocess.Popen with several
         exceptions:
             * stdin, stdout, and stderr can only be None or PIPE.
+        
+        In Python 3, all data read from stdout and stderr will be treated as
+        the "bytes" built-in type; it is up to the user to convert this type
+        to the appropriate character type, if desired.
         '''
         # Check for use of stdin, stdout, stderr values other than NONE, PIPE
         if stdin != None and stdin != PIPE:
@@ -97,57 +98,70 @@ class AsyncPopen(Popen):
         '''Flag to use stdin.'''
         if _stdout == PIPE:
             self.use_stdout = True
-            self.stdout_queue = Queue()
+            self.stdout_queue = deque()
             '''Queue of data read from stdout.'''
+            self.stdout_lock = Lock()
+            '''Lock used for stdout queue synchronization.'''
             self.stdout_thread = Thread(target=self._ThreadedOutputQueue,
-                                        args=(self.stdout, self.stdout_queue))
+                                        args=(self.stdout, self.stdout_queue,
+                                              self.stdout_lock))
             '''Queue management thread for stdout.'''
             self.stdout_thread.daemon = True
             self.stdout_thread.start()
         if _stderr == PIPE:
             self.use_stderr = True
-            self.stderr_queue = Queue()
+            self.stderr_queue = deque()
             '''Queue of data read from stderr.'''
+            self.stderr_lock = Lock()
+            '''Lock used for stderr queue synchronization.'''
             self.stderr_thread = Thread(target=self._ThreadedOutputQueue,
-                                        args=(self.stderr, self.stderr_queue))
+                                        args=(self.stderr, self.stderr_queue,
+                                              self.stderr_lock))
             '''Queue management thread for stderr.'''
             self.stderr_thread.daemon = True
             self.stderr_thread.start()
         if _stdin == PIPE:
             self.use_stdin = True
-            self.stdin_queue = Queue()
+            self.stdin_queue = deque()
             '''Queue of data to write to stdin.'''
+            self.stdin_lock = Lock()
+            '''Lock used for stdin queue synchronization.'''
             self.stdin_thread = Thread(target=self._ThreadedInputQueue,
-                                        args=(self.stdin, self.stdin_queue))
+                                        args=(self.stdin, self.stdin_queue,
+                                              self.stdin_lock))
             '''Queue management thread for stdin.'''
             self.stdin_thread.daemon = True
             self.stdin_thread.start()
     
-    def _ThreadedOutputQueue(self, pipe, queue):
+    def _ThreadedOutputQueue(self, pipe, queue, lock):
         '''
         Called from the thread to update an output (stdout, stderr) queue.
         '''
         try:
             while True:
                 chunk = pipe.readline()
-                if chunk == "":
+                if not chunk:
                     # hit end-of-file
                     break
-                queue.put(chunk)
+                lock.acquire()
+                queue.append(chunk)
+                lock.release()
         except:
             pass
         finally:
             pipe.close()
     
-    def _ThreadedInputQueue(self, pipe, queue):
+    def _ThreadedInputQueue(self, pipe, queue, lock):
         '''
         Called from the thread to update an input (stdin) queue.
         '''
         try:
             while True:
-                chunk = queue.get(True)
-                print "[debug] writing %s to pipe" % chunk
-                pipe.write(chunk)
+                lock.acquire()
+                while len(queue) > 0:
+                    chunk = queue.popleft()
+                    pipe.write(chunk)
+                lock.release()
                 pipe.flush()
         except:
             pass
@@ -162,29 +176,36 @@ class AsyncPopen(Popen):
         '''
         if self.use_stdin and input:
             # enqueue data
-            self.stdin_queue.put_nowait(input)
+            self.stdin_lock.acquire()
+            self.stdin_queue.append(input)
+            self.stdin_lock.release()
         
         stdoutdata = None
         stderrdata = None
         if self.use_stdout:
             # get data
+            data = b""
+            self.stderr_lock.acquire()
             try:
-                data = ""
-                while 1:
-                    data += self.stdout_queue.get_nowait()
-            except Empty:
-                pass
-            finally:
-                if data: stdoutdata = data
+                while len(self.stdout_queue) > 0:
+                    data += self.stdout_queue.popleft()
+            except:
+                self.stderr_lock.release()
+                raise
+            self.stderr_lock.release()
+            if data: stdoutdata = data
+
         if self.use_stderr:
             # get data
+            data = b""
+            self.stderr_lock.acquire()
             try:
-                data = ""
-                while 1:
-                    data += self.stderr_queue.get_nowait()
-            except Empty:
-                pass
-            finally:
-                if data: stderrdata = data
+                while len(self.stderr_queue) > 0:
+                    data += self.stderr_queue.popleft()
+            except:
+                self.stderr_lock.release()
+                raise
+            self.stderr_lock.release()
+            if data: stderrdata = data
         
         return (stdoutdata, stderrdata)

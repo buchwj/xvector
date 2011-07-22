@@ -32,9 +32,12 @@ import ConfigParser
 import os
 import re
 import sys
+import logging
+import traceback
 
-import ClientPaths
-import ErrorReporting
+from . import ClientPaths
+
+mainlog = logging.getLogger("Client.Main")
 
 # And here, of course, are those nasty little global variables
 # that we need in this case for cross-module sprite access.
@@ -419,110 +422,124 @@ class SpriteSet(list):
             anim.PumpAnimation(curtime)
 
 
-class NoSpriteException(Exception):
-    """
-    Simple exception that is raised if a sprite
-    that does not exist is requested.
-    """
-    pass
+class NoSpriteException(Exception): pass
+'''Raised if a nonexistant sprite is requested.'''
 
 
-# We now move on to the cross-module support code.
-# These functions can be called by treating the Sprite module as an object;
-# doing so will preserve the state of the module across every module that
-# calls it.
+class SpriteDirectoryNotFound(Exception): pass
+'''Raised if no sprite directory can be found for the given server.'''
 
-def _LoadSpriteType(type, fileprefix, basedir=""):
-    """
-    Loads one type of sprite.
-    """
-    # create the empty sprite set
-    spriteset = SpriteSet()
-    spriteset.type = type
 
-    # enumerate the available resource files
-    try:
-        pattern = ClientPaths.GetRegexForExtension(".meta")
-        potentials = os.listdir(ClientPaths.GetSpriteDir(basedir))
-        files = filter(pattern.match, potentials)
-    except Exception as e:
-        # something went wrong
-        msg = "The sprite directory could not be opened.\n\n"
-        msg += "Details:\n" + str(e.args)
-        ErrorReporting.ShowError(msg, ErrorReporting.FatalError)
-        raise SpriteLoadFailure(msg)
-
-    # check each file for a match
-    pattern = re.compile(r"^" + fileprefix + r"(?P<id>\d+)\.meta$")
-    matches = {}
-    for f in files:
-        matched = pattern.match(f)
-        if matched == None:
-            continue        # not a match!
-        matches[int(matched.group("id"))] = f
+class SpriteManager(dict):
+    '''
+    Manages the sprites for a single server.
     
-    # now load all of the items
-    counter = 0
-    for fileinfo in sorted(matches.items()):
-        counter += 1
-        filename = fileinfo[1]
+    This subclasses dict to allow easy access to the spritesets; this object
+    maps the names of the spritesets to the spritesets.
+    '''
+    
+    def __init__(self, name=None):
+        '''
+        Creates a new sprite manager and loads its sprites.
+        
+        If the server name is specified and a sprite directory for the server
+        cannot be found, the default sprites will be loaded instead.  If the
+        default sprites cannot be found, the SpriteDirectoryNotFound exception
+        will be raised.
+        
+        @type name: string
+        @param name: Name of server.  Set to None to use default sprites.
+        
+        @raise SpriteDirectoryNotFound: Raised if no sprite directories,
+        including the default, can be found.
+        '''
+        # Declare attributes.
+        self.ServerName = name
+        '''Name of the server these sprites are connected to.'''
+        
+        self.SpriteDir = None
+        '''Directory where the sprites are located.'''
+        
+        # Locate the sprite directory.
+        if name != None:
+            # It's a server-specific sprite directory.
+            self.SpriteDir = os.path.join(ClientPaths.ServerResourceDir(name),
+                                          ClientPaths.SpritesPrefix)
+            if not os.path.isdir(self.SpriteDir):
+                # Server sprite directory not found.
+                msg = "Server sprite directory for %s not found." % name
+                mainlog.error(msg)
+                raise SpriteDirectoryNotFound
+        else:
+            # Default sprites.
+            self.SpriteDir = os.path.join(ClientPaths.BaseMasterPath,
+                                          ClientPaths.SpritesPrefix)
+            if not os.path.isdir(self.SpriteDir):
+                # Sprite directory not found.
+                msg = "Default sprite directory not found at\n"
+                msg += self.SpriteDir
+                mainlog.error(msg)
+                raise SpriteDirectoryNotFound
+        
+        # Load the sprites.
+        self._LoadAllSprites()
+    
+    def _LoadSpriteType(self, type, fileprefix):
+        '''
+        Loads one type of sprite.
+        '''
+        # create the empty sprite set
+        spriteset = SpriteSet()
+        spriteset.type = type
+    
+        # enumerate the available resource files
         try:
-            spritefile = ClientPaths.GetSpriteFile(filename,basedir)
-            spriteset.LoadFile(spritefile)
-        except Exception as e:
-            # problem loading that one...
-            counter -= 1
-            err = "Failed to load spritesheet from '" + filename + "'.\n\n"
-            err += "Details:\n" + str(e.args[0])
-            ErrorReporting.ShowError(err, ErrorReporting.FatalError)
-            sys.exit()
-
-    # Done!
-    print "Found", counter, type, "spritesheets."
-    return spriteset
-
-
-def LoadAllSprites(basedir=""):
-    """
-    Loads all of the sprites for immediate access.
-    """
-    global spritesets
-    spritesets = {}
-
-    print "Loading sprites..."
-
-    # load the main sprites
-    spritesets['tiles'] = _LoadSpriteType("tile","tiles",basedir)
-    spritesets['items'] = _LoadSpriteType("item","items",basedir)
-    spritesets['npcs'] = _LoadSpriteType("NPC", "npcs",basedir)
-
-    # finally, add an empty "runtime" set for on-the-fly sprites
-    spritesets['runtime'] = SpriteSet()
-    spritesets['runtime'].type = "runtime"
-
-    # announce our success
-    print "Sprites loaded."
-
-
-def GetSpriteSet(type):
-    """
-    Returns a handle to the spriteset of the requested type.
-
-    If no spriteset is found for the requested type, a KeyError will
-    be raised.
-
-    The currently supported types (by default) are C{tiles}, C{items},
-    C{npcs}, and C{runtime}.
+            pattern = ClientPaths.GetRegexForExtension(".meta")
+            potentials = os.listdir(self.SpriteDir)
+            files = filter(pattern.match, potentials)
+        except:
+            # something went wrong
+            msg = "The sprite directory could not be opened.\n\n"
+            msg += "Details:\n" + traceback.format_exc()
+            mainlog.error(msg)
+            raise SpriteLoadFailure(msg)
     
-    @deprecated: Refactoring has made this unnecessary.  Will be removed
-    at some point.  In the future, directly access the C{spritesets} member
-    of this module.
-    """
-    # check the type
-    global spritesets
-    if type not in spritesets:
-        # sorry, we don't have that type of sprite
-        raise KeyError("Sorry, we don't have that type of sprite!")
-
-    # get the spriteset
-    return spritesets[type]
+        # check each file for a match
+        pattern = re.compile(r"^" + fileprefix + r"(?P<id>\d+)\.meta$")
+        matches = {}
+        for fileobj in files:
+            matched = pattern.match(fileobj)
+            if matched == None:
+                continue        # not a match!
+            matches[int(matched.group("id"))] = fileobj
+        
+        # now load all of the items
+        counter = 0
+        for fileinfo in sorted(matches.items()):
+            counter += 1
+            filename = fileinfo[1]
+            try:
+                spritefile = os.path.join(self.SpriteDir, filename)
+                spriteset.LoadFile(spritefile)
+            except:
+                # problem loading that one...
+                counter -= 1
+                err = "Failed to load spritesheet from %s.\n\n" % filename
+                err += "Details:\n" + traceback.format_exc()
+                mainlog.error(err)
+        
+        # Done!
+        return spriteset
+    
+    def _LoadAllSprites(self):
+        '''
+        Loads the sprites from the sprite directory.
+        '''
+        # load the main sprites
+        self['tiles'] = self._LoadSpriteType("tile", "tiles")
+        self['items'] = self._LoadSpriteType("item", "items")
+        self['npcs'] = self._LoadSpriteType("NPC", "npcs")
+    
+        # finally, add an empty "runtime" set for on-the-fly sprites
+        self['runtime'] = SpriteSet()
+        self['runtime'].type = "runtime"

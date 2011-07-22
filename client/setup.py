@@ -26,6 +26,17 @@ long_description += "experience while also providing developers with a "
 long_description += "powerful plugin and scripting API.  This package provides"
 long_description += " the client application for the engine."
 
+# okay, we need to find our data files
+import os
+resfiles = []
+startpath = os.path.join("xVClient", "res")
+for triple in os.walk(startpath):
+    base = os.path.relpath(triple[0], "xVClient")
+    dirfiles = triple[2]
+    for singlefile in dirfiles:
+        if singlefile[len(singlefile)-1] != '~':
+            resfiles.append(os.path.join(base, singlefile))
+
 setup(name='xVClient',
       author="James R. Buchwald",
       author_email="buchwj@rpi.edu",
@@ -48,7 +59,8 @@ setup(name='xVClient',
       
       packages=['xVClient', 'xVClient.ui'],
       scripts=['xVClient/Client.py'],
-      package_data={'xVClient.ui': ['*.ui']},
+      package_data={'xVClient.ui': ['*.ui'],
+                    'xVClient': resfiles},
       data_files=[('', ['LICENSE', 'CREDITS'])],
       requires=['xVLib (==0.0.1)'],
       provides=['xVClient'],

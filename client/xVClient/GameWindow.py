@@ -19,10 +19,6 @@ from PyQt4 import QtGui
 
 from . import GameRenderer, ClientConfig, ClientVersion
 
-# auto-generated UI classes
-from .ui import TitleWidgetUI, LoginWidgetUI, ConnectWidgetUI
-from .ui import MetaserverWidgetUI
-
 class ClientWindow(QtGui.QMainWindow):
     """
     Main window class for the client.
@@ -31,11 +27,15 @@ class ClientWindow(QtGui.QMainWindow):
     ##
     ## State constants.
     ##
-    State_Intermediate = 0
-    State_Preconnect = 1
-    State_Connecting = 2
-    State_Login = 3
-    State_Game = 4
+    State_Startup = 0
+    State_Game = 1
+    
+    ##
+    ## Hard-coded settings
+    ## (Only things that really shouldn't be changed)
+    ##
+    Resolution = (1024, 768)
+    '''Dimensions of the screen.'''
 
     def __init__(self, parent=None):
         """
@@ -44,9 +44,9 @@ class ClientWindow(QtGui.QMainWindow):
         # Set up the basics
         super(ClientWindow,self).__init__(parent)
         self.setWindowTitle(ClientVersion.APP_NAME)
-        self.resize(800,600)
-        self.setMaximumSize(800,600)
-        self.setMinimumSize(800,600)
+        self.resize(self.Resolution[0], self.Resolution[1])
+        self.setMaximumSize(self.Resolution[0], self.Resolution[1])
+        self.setMinimumSize(self.Resolution[0], self.Resolution[1])
         
         # Create our main rendering system
         self.renderer = GameRenderer.GameRenderer(self)

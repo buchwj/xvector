@@ -22,7 +22,11 @@ Contains classes that represent maps and parts of maps.
 """
 
 import struct
+import logging
+import traceback
 from xVLib import BinaryStructs
+
+mainlog = logging.getLogger("")
 
 #
 # MAPS
@@ -201,7 +205,7 @@ class BaseMap(object):
     MagicNumber = 0xB0501
     '''"Magic" number that appears at the beginning of every map file.'''
 
-    def __init__(self, width=1, height=1, depth=1):
+    def __init__(self, width=1, height=1, depth=5, playerdepth=2):
         """
         Creates an empty map with the given dimensions.
         
@@ -213,6 +217,9 @@ class BaseMap(object):
         
         @type depth: integer
         @param depth: Number of layers in the new map.  Must be greater than 0.
+        
+        @type playerdepth: integer
+        @param playerdepth: Layer at which objects are rendered.
         """
         # check the dimensions
         if width <= 0 or height <= 0:
@@ -221,9 +228,9 @@ class BaseMap(object):
         # predefine some variables
         self.header = MapHeader()
         """Main header of the map file."""
-        self.header.width = width
-        self.header.height = height
-        self.header.depth = depth
+        self.header.Width = width
+        self.header.Height = height
+        self.header.Depth = depth
 
         self.tiles = []
         '''
@@ -250,14 +257,14 @@ class BaseMap(object):
         '''
         Initializes the map to a completely blank map.
         
-        @type width: integer
-        @param width: Width of new map to initialize
+        @type Width: integer
+        @param Width: Width of new map to initialize
         
-        @type height: integer
-        @param height: Height of new map to initialize
+        @type Height: integer
+        @param Height: Height of new map to initialize
         
-        @type depth: integer
-        @param depth: Depth of new map to initialize
+        @type Depth: integer
+        @param Depth: Depth of new map to initialize
         '''
         # validate parameters
         if width < 1 or height < 1 or depth < 1:
@@ -277,85 +284,96 @@ class BaseMap(object):
                     self.tiles[z][x].append(tile)
         
     @property
-    def width(self):
+    def Width(self):
         """
-        Convenience property that abstracts the width out of the header.
+        Convenience property that abstracts the Width out of the header.
         """
-        return self.header.width
+        return self.header.Width
     
-    @width.setter
-    def width(self, width):
-        self.header.width = width
-    
-    @property
-    def height(self):
-        """
-        Convenience property that abstracts the height out of the header.
-        """
-        return self.header.height
-    
-    @height.setter
-    def height(self, height):
-        self.header.height = height
+    @Width.setter
+    def Width(self, width):
+        self.header.Width = width
     
     @property
-    def depth(self):
+    def Height(self):
+        """
+        Convenience property that abstracts the Height out of the header.
+        """
+        return self.header.Height
+    
+    @Height.setter
+    def Height(self, height):
+        self.header.Height = height
+    
+    @property
+    def Depth(self):
         '''
-        Convenience property that abstracts the depth out of the header.
+        Convenience property that abstracts the Depth out of the header.
         '''
-        return self.header.depth
+        return self.header.Depth
     
-    @depth.setter
-    def depth(self, depth):
-        self.header.depth = depth
+    @Depth.setter
+    def Depth(self, depth):
+        self.header.Depth = depth
     
     @property
-    def northmap(self):
+    def PlayerDepth(self):
+        '''
+        Convenience property that gets PlayerDepth from the header.
+        '''
+        return self.header.PlayerDepth
+    
+    @PlayerDepth.setter
+    def PlayerDepth(self, playerdepth):
+        self.header.PlayerDepth = playerdepth
+    
+    @property
+    def NorthMap(self):
         """
         Convenience property connected to the north-bordered map name.
         This value is actually stored in the header.
         """
-        return self.header.northmap
+        return self.header.NorthMap
     
-    @northmap.setter
-    def northmap(self, northmap):
-        self.header.northmap = northmap
+    @NorthMap.setter
+    def NorthMap(self, northmap):
+        self.header.NorthMap = northmap
         
     @property
-    def eastmap(self):
+    def EastMap(self):
         """
         Convenience property connected to the east-bordered map name.
         This value is actually stored in the header.
         """
-        return self.header.eastmap
+        return self.header.EastMap
     
-    @eastmap.setter
-    def eastmap(self, eastmap):
-        self.header.eastmap = eastmap
+    @EastMap.setter
+    def EastMap(self, eastmap):
+        self.header.EastMap = eastmap
         
     @property
-    def southmap(self):
+    def SouthMap(self):
         """
         Convenience property connected to the south-bordered map name.
         This value is actually stored in the header.
         """
-        return self.header.southmap
+        return self.header.SouthMap
     
-    @southmap.setter
-    def southmap(self, southmap):
-        self.header.southmap = southmap
+    @SouthMap.setter
+    def SouthMap(self, southmap):
+        self.header.SouthMap = southmap
     
     @property
-    def westmap(self):
+    def WestMap(self):
         """
         Convenience property connected to the west-bordered map name.
         This value is actually stored in the header.
         """
-        return self.header.westmap
+        return self.header.WestMap
     
-    @westmap.setter
-    def westmap(self, westmap):
-        self.header.westmap = westmap
+    @WestMap.setter
+    def WestMap(self, westmap):
+        self.header.WestMap = westmap
 
     def LoadMapFromFile(self, filepath):
         """
@@ -406,29 +424,32 @@ class BaseMap(object):
         self.header.Deserialize(fileobj, formatver)
 
         # initialize the map to the correct dimensions
-        self._InitBlankMap(self.width, self.height, self.depth)
+        self._InitBlankMap(self.Width, self.Height, self.Depth)
 
         # now we read in each tile
         try:
             # we can only have a maximum tilecount of w*h*d...
             # (it's kinda like the Pauli Exclusion Principle...)
-            # ALL TILES HAVE UNIQUE QUANTUM STATES!!!
-            for tilenum in range(self.width * self.height * self.depth):
+            # ALL TILES MUST HAVE UNIQUE QUANTUM STATES!!!
+            for tilenum in range(self.Width * self.Height * self.Depth):
                 # read in the next tile
                 try:
                     tile = Tile().Deserialize(fileobj, formatver)
                 except IOError as e:
                     raise MapError("Invalid/corrupt map file", e)
                 # validate the tile
-                if tile.x < 0 or tile.x >= self.width:
+                if tile.x < 0 or tile.x >= self.Width:
                     # invalid tile
-                    raise MapError("invalid tile found: x-coordinate out of bounds")
-                elif tile.y < 0 or tile.y >= self.height:
+                    msg = "invalid tile found: x-coordinate out of bounds"
+                    raise MapError(msg)
+                elif tile.y < 0 or tile.y >= self.Height:
                     # invalid tile
-                    raise MapError("invalid tile found: y-coordinate out of bounds")
-                elif tile.z < 0 or tile.z >= self.depth:
+                    msg = "invalid tile found: y-coordinate out of bounds"
+                    raise MapError(msg)
+                elif tile.z < 0 or tile.z >= self.Depth:
                     # invalid tile
-                    raise MapError("invalid tile found: z-coordinate out of bounds")
+                    msg = "invalid tile found: z-coordinate out of bounds"
+                    raise MapError(msg)
                 elif tile.tileid < 0:
                     # invalid tile
                     raise MapError("invalid tile found: negative sprite index")
@@ -436,8 +457,7 @@ class BaseMap(object):
                 self.tiles[tile.z][tile.x][tile.y] = tile
         except EndOfSectionException:
             # This is raised when the tiles section ends; it's a good thing.
-            print "[debug] hit end of section"
-            pass    # Continue loading the map.
+            pass
     
     def SaveMapToFile(self, filepath):
         """
@@ -475,9 +495,9 @@ class BaseMap(object):
         self.header.Serialize(fileobj)
         
         # write the tiles
-        for z in range(self.depth):
-            for x in range(self.width):
-                for y in range(self.height):
+        for z in range(self.Depth):
+            for x in range(self.Width):
+                for y in range(self.Height):
                     self.tiles[z][x][y].Serialize(fileobj)
         
         # store the end-of-section flag
@@ -487,68 +507,68 @@ class BaseMap(object):
         """
         Resizes a map to the given dimensions.
         
-        @type width: integer
-        @param width: New width, in tiles, of the map.
+        @type Width: integer
+        @param Width: New Width, in tiles, of the map.
         
-        @type height: integer
-        @param height: New height, in tiles, of the map.
+        @type Height: integer
+        @param Height: New Height, in tiles, of the map.
         """
         # check the dimensions
         if width <= 0 or height <= 0 or depth <= 0:
             # invalid dimensions
             raise IndexError("map dimensions must be greater than 0")
         
-        # are we increasing in depth?
-        if depth > self.header.depth:
+        # are we increasing in Depth?
+        if depth > self.header.Depth:
             # add and fill new Z components
-            for z in range(self.header.depth, depth):
+            for z in range(self.header.Depth, depth):
                 self.tiles[z].insert(z,[])
-                for x in range(self.header.width):
+                for x in range(self.header.Width):
                     self.tiles[z].insert(x,[])
-                    for y in range(self.header.height):
+                    for y in range(self.header.Height):
                         # insert a new blank tile
                         self.tiles[z][x].insert(y,Tile())
-        # if not, then are we decreasing in depth?
-        elif depth < self.header.depth:
+        # if not, then are we decreasing in Depth?
+        elif depth < self.header.Depth:
             # destroy the Z components
-            for z in range(depth, self.header.depth):
+            for z in range(depth, self.header.Depth):
                 del self.tiles[z]
         
-        # are we increasing in width?
-        if width > self.header.width:
+        # are we increasing in Width?
+        if width > self.header.Width:
             # add and fill new X components
             for z in range(depth):
-                for x in range(self.header.width, width):
+                for x in range(self.header.Width, width):
                     self.tiles[z].insert(x,[])
-                    for y in range(self.header.height):
+                    for y in range(self.header.Height):
                         # insert a new blank tile
                         self.tiles[z][x].insert(y,Tile())
-        # if not, then are we decreasing in width?
-        elif width < self.header.width:
+        # if not, then are we decreasing in Width?
+        elif width < self.header.Width:
             # destroy the X components
             for z in range(depth):
-                for x in range(width, self.header.width):
+                for x in range(width, self.header.Width):
                     del self.tiles[z][x]
         
-        # now check the height - is it increasing?
-        if height > self.header.height:
+        # now check the Height - is it increasing?
+        if height > self.header.Height:
             # add new Y components
-            for y in range(self.header.height, height):
+            for y in range(self.header.Height, height):
                 for x in range(width):
                     for z in range(depth):
                         self.tiles[z][x].insert(y,Tile())
-        # if not, are we decreasing in height?
-        elif height < self.header.height:
+        # if not, are we decreasing in Height?
+        elif height < self.header.Height:
             # destroy some Y components
-            for y in range(height, self.header.height):
+            for y in range(height, self.header.Height):
                 for x in range(width):
                     for z in range(depth):
                         del self.tiles[z][x][y]
         
         # update the dimensions in the header
-        self.header.width = width
-        self.header.height = height
-        self.header.depth = depth
+        self.header.Width = width
+        self.header.Height = height
+        self.header.Depth = depth
 
 
 class MapHeader(object):
@@ -557,37 +577,40 @@ class MapHeader(object):
     """
     
     Flag_ContentStripped = 1
-    """XOR flag set in the header when the map has been stripped down."""
+    """XOR flag set in the header when the map has been Stripped down."""
     
     def __init__(self):
         """
         Creates a new header with default values.
         """
-        self.width = 1
+        self.Width = 1
         """Width of the map in tiles."""
 
-        self.height = 1
+        self.Height = 1
         """Height of the map in tiles."""
         
-        self.depth = 1
+        self.Depth = 5
         '''Number of layers in the map.'''
+        
+        self.PlayerDepth = 2
+        '''Layer at which objects and players are rendered.''' 
 
-        self.mapname = u""
+        self.MapName = u""
         """Descriptive, human-readable name of the map."""
 
-        self.northmap = u""
+        self.NorthMap = u""
         """Name of the map that lies along the northern border."""
 
-        self.eastmap = u""
+        self.EastMap = u""
         """Name of the map that lies along the eastern border."""
 
-        self.southmap = u""
+        self.SouthMap = u""
         """Name of the map that lies along the southern border."""
 
-        self.westmap = u""
+        self.WestMap = u""
         """Name of the map that lies along the western border."""
         
-        self.stripped = False
+        self.Stripped = False
         """If true, the server has removed data from this map."""
     
     def Serialize(self, fileobj):
@@ -603,22 +626,23 @@ class MapHeader(object):
         # nothing too special, just write everything in the right order
         try:
             print "[debug] serializing map header"
-            print "[debug] map name is", self.mapname
-            BinaryStructs.SerializeUTF8(fileobj, self.mapname)
-            BinaryStructs.SerializeUint32(fileobj, self.width)
-            BinaryStructs.SerializeUint32(fileobj, self.height)
-            BinaryStructs.SerializeUint32(fileobj, self.depth)
-            BinaryStructs.SerializeUTF8(fileobj, self.northmap)
-            BinaryStructs.SerializeUTF8(fileobj, self.eastmap)
-            BinaryStructs.SerializeUTF8(fileobj, self.southmap)
-            BinaryStructs.SerializeUTF8(fileobj, self.westmap)
+            print "[debug] map name is", self.MapName
+            BinaryStructs.SerializeUTF8(fileobj, self.MapName)
+            BinaryStructs.SerializeUint32(fileobj, self.Width)
+            BinaryStructs.SerializeUint32(fileobj, self.Height)
+            BinaryStructs.SerializeUint32(fileobj, self.Depth)
+            BinaryStructs.SerializeUint32(fileobj, self.PlayerDepth)
+            BinaryStructs.SerializeUTF8(fileobj, self.NorthMap)
+            BinaryStructs.SerializeUTF8(fileobj, self.EastMap)
+            BinaryStructs.SerializeUTF8(fileobj, self.SouthMap)
+            BinaryStructs.SerializeUTF8(fileobj, self.WestMap)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
         # pack the content flags
         try:
             contentFlags = 0
-            if self.stripped:
+            if self.Stripped:
                 contentFlags |= self.Flag_ContentStripped
             BinaryStructs.SerializeUint32(fileobj, contentFlags)
         except Exception as e:
@@ -640,29 +664,36 @@ class MapHeader(object):
             # again, we're just reading everything in the right order
             # first up is the basic file information
             try:
-                self.mapname = BinaryStructs.DeserializeUTF8(fileobj)
-                self.mapname.strip()
-                self.width = BinaryStructs.DeserializeUint32(fileobj)
-                self.height = BinaryStructs.DeserializeUint32(fileobj)
-                self.depth = BinaryStructs.DeserializeUint32(fileobj)
-            except Exception as e:
-                raise MapError("Map file is invalid/corrupt.", e)
+                self.MapName = BinaryStructs.DeserializeUTF8(fileobj)
+                self.MapName.strip()
+                self.Width = BinaryStructs.DeserializeUint32(fileobj)
+                self.Height = BinaryStructs.DeserializeUint32(fileobj)
+                self.Depth = BinaryStructs.DeserializeUint32(fileobj)
+                self.PlayerDepth = BinaryStructs.DeserializeUint32(fileobj)
+            except:
+                msg = "Map file is invalid/corrupt.\n" 
+                msg += traceback.format_exc()
+                mainlog.error(msg)
+                raise
             
             # validate the basic file information
-            if self.width < 1 or self.height < 1 or self.depth < 1:
+            if self.Width < 1 or self.Height < 1 or self.Depth < 1:
                 # invalid dimensions
                 raise MapError("Map file is invalid/corrupt: dimensions")
+            if self.PlayerDepth < 0 or self.PlayerDepth >= self.Depth:
+                # render depth out of bounds
+                raise MapError("Player/object render depth out of bounds.")
             
             # now we read in the links
             try:
-                self.northmap = BinaryStructs.DeserializeUTF8(fileobj)
-                self.northmap.strip()
-                self.eastmap = BinaryStructs.DeserializeUTF8(fileobj)
-                self.eastmap.strip()
-                self.southmap = BinaryStructs.DeserializeUTF8(fileobj)
-                self.southmap.strip()
-                self.westmap = BinaryStructs.DeserializeUTF8(fileobj)
-                self.westmap.strip()
+                self.NorthMap = BinaryStructs.DeserializeUTF8(fileobj)
+                self.NorthMap.strip()
+                self.EastMap = BinaryStructs.DeserializeUTF8(fileobj)
+                self.EastMap.strip()
+                self.SouthMap = BinaryStructs.DeserializeUTF8(fileobj)
+                self.SouthMap.strip()
+                self.WestMap = BinaryStructs.DeserializeUTF8(fileobj)
+                self.WestMap.strip()
             except Exception as e:
                 raise MapError("Map file is invalid/corrupt.", e)
             
@@ -671,7 +702,7 @@ class MapHeader(object):
                 contentflags = BinaryStructs.DeserializeUint32(fileobj)
             except Exception as e:
                 raise MapError("Map file is invalid/corrupt.", e)
-            self.stripped = contentflags & self.Flag_ContentStripped
+            self.Stripped = contentflags & self.Flag_ContentStripped
             
         else:
             # unrecognized future version
@@ -687,18 +718,4 @@ class Map(BaseMap):
     way we can control how much the client knows.  The more the client knows,
     the easier it is for a hacker to take advantage of the system.
     """
-    def __init__(self, width=1, height=1, depth=1):
-        '''
-        Creates an empty map with the given dimensions.
-        
-        @type width: integer
-        @param width: Width of the new map.  Must be greater than 0.
-        
-        @type height: integer
-        @param height: Height of the new map.  Must be greater than 0.
-        
-        @type depth: integer
-        @param depth: Number of layers in the new map.  Must be greater than 0.
-        '''
-        # initialize the base map
-        super(Map, self).__init__(width, height, depth)
+    pass

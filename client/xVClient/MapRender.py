@@ -32,7 +32,6 @@ the engine.
 
 from PyQt4 import QtCore, QtGui
 from xVLib import Maps
-import Sprite
 
 # First up, we have a set of functions that calculate tile coordinates.
 def GetTileTL(x, y):
@@ -157,14 +156,20 @@ class MapRenderer(object):
     handles neighboring maps, see the FullMapRenderer class.
     """
 
-    def __init__(self, map=None):
+    def __init__(self, sprites, map=None):
         """
         Initializes a new renderer.
+
+        @type sprites: Sprite.SpritesManager
+        @param sprites: Sprite manager to use for rendering.
 
         @type map: L{Maps.BaseMap}
         @param map: Optional map to use in this renderer.
         """
         # set up our attributes
+        self.Sprites = sprites
+        '''Sprite manager to use for rendering.'''
+        
         self.map = map
         """Map object that this renderer is connected to."""
 
@@ -211,13 +216,13 @@ class MapRenderer(object):
         @type width: integer
         @param width: Width of map section to render (pixels)
         
-        @type height: integer
-        @param height: Height of map section to render (pixels)
+        @type Height: integer
+        @param Height: Height of map section to render (pixels)
         '''
         # Validate parameters
         stlx,stly = source_coords
-        if stlx < 0 or stly < 0 or stlx > self.map.width * Maps.TileWidth     \
-            or stly > self.map.height * Maps.TileHeight:
+        if stlx < 0 or stly < 0 or stlx > self.map.Width * Maps.TileWidth     \
+            or stly > self.map.Height * Maps.TileHeight:
             raise IndexError("source coordinates out of bounds")
         if width < 1 or height < 1:
             raise MapRenderError("Rendered region dimensions must be >= 1")
@@ -235,15 +240,15 @@ class MapRenderer(object):
         
         painter.end()
         
-        # Walk through each layer and render, from lowest depth to highest
-        for z in range(self.map.depth):
+        # Walk through each layer and render, from lowest Depth to highest
+        for z in range(self.map.Depth):
             self.RenderLayer(surface, target_coords, source_coords,
                              target_offset, width, height, z)
     
     def RenderLayer(self, surface, target_coords, source_coords, target_offset,
                     width, height, layer, alpha=255):
         '''
-        Draws a portion of a single depth layer of the map to the given surface.
+        Draws a portion of a single Depth layer of the map to the given surface.
         
         This method will not wipe the surface prior to rendering.  If there is
         garbage below, it will remain visible through any transparent render.
@@ -292,12 +297,12 @@ class MapRenderer(object):
         
         # Validate parameters
         stlx,stly = source_coords
-        if stlx < 0 or stly < 0 or stlx > self.map.width * Maps.TileWidth     \
-            or stly > self.map.height * Maps.TileHeight:
+        if (stlx < 0 or stly < 0 or stlx > self.map.Width * Maps.TileWidth
+            or stly > self.map.Height * Maps.TileHeight):
             raise IndexError("source coordinates out of bounds")
         if width < 1 or height < 1:
             raise MapRenderError("Rendered region dimensions must be >= 1")
-        if layer < 0 or layer > self.map.depth:
+        if layer < 0 or layer > self.map.Depth:
             raise MapRenderError("Cannot render a layer which does not exist.")
         
         # Prepare the surface
@@ -323,8 +328,8 @@ class MapRenderer(object):
         startY //= Maps.TileHeight
         endX = endX // Maps.TileWidth + 1
         endY = endY // Maps.TileHeight + 1
-        if endX > self.map.width: endX = self.map.width
-        if endY > self.map.height: endY = self.map.height
+        if endX > self.map.Width: endX = self.map.Width
+        if endY > self.map.Height: endY = self.map.Height
         
         # Render
         for x in range(startX, endX):
@@ -333,7 +338,7 @@ class MapRenderer(object):
                 try:
                     tile = current_layer[x][y]
                 except IndexError:
-                    # tile not found; skipif endY > self.map.height: endY = self.map.height
+                    # tile not found; skipif endY > self.map.Height: endY = self.map.Height
                     print "[warning] tried to render tile out of bounds"
                     print "\tcoordinates:", x, ",", y
                     continue
@@ -342,7 +347,7 @@ class MapRenderer(object):
                     # blank tile, don't bother drawing it
                     continue
                 try:
-                    sprite = Sprite.spritesets['tiles'][tile.tileid]
+                    sprite = self.Sprites['tiles'][tile.tileid]
                 except KeyError:
                     # we don't have the sprite for this tile; skip
                     print "[warning] tile", tile.tileid, "not found, skipping"

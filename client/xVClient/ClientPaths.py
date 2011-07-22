@@ -24,7 +24,47 @@ import re
 from xVLib import Directories
 
 # constants
-userdir = ".xvector"
+BaseUserPath = os.path.join(os.path.expanduser("~"), ".xvector")
+'''Path of folder containing user files.'''
+
+BaseMasterPath = os.path.join(os.path.split(__file__)[0], "res")
+'''Path to the master (non-user) files.'''
+
+
+##
+## Various default resource files
+##
+
+DefaultStyleSheet = os.path.join(BaseMasterPath, "res", "ui", 
+                                 "DefaultTheme.qss")
+'''Path to the default stylesheet for the application.'''
+
+
+##
+## Resource directory prefixes
+## (These can be added to a server resource directory, or onto the master
+## resource directory to get the default resources).
+##
+
+ServersPrefix = "Servers"
+'''Directory prefix of the folder containing all server resources.'''
+
+SpritesPrefix = "Sprites"
+'''Directory prefix of the sprites folders.'''
+
+
+##
+## Methods for locating server-specific files
+##
+
+def ServerResourceDir(name):
+    '''
+    Gets the path to the base resource directory for the given server.
+    
+    @type name: string
+    @param name: Server name
+    '''
+    return os.path.join(BaseUserPath, ServersPrefix, name)
 
 
 def CreateUserDataDir():
@@ -33,16 +73,21 @@ def CreateUserDataDir():
 
     If the directory does not exist, nothing happens.
     """
-    dirpath = os.path.join(os.path.expanduser("~"), userdir)
+    dirpath = os.path.join(os.path.expanduser("~"), BaseUserPath)
     Directories.mkdir(dirpath)
 
+
+##
+## ALL OF THE FOLLOWING METHODS ARE DEPRECATED!
+## DO NOT USE THESE!!!
+##
 
 def GetUserFile(filename):
     """
     Gets a path to a user-specific data file (RW).
     """
-    global userdir
-    return os.path.join(os.path.expanduser("~"), userdir, filename)
+    global BaseUserPath
+    return os.path.join(os.path.expanduser("~"), BaseUserPath, filename)
 
 
 def GetSpriteDir(basedir=""):

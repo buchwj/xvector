@@ -364,10 +364,10 @@ class PenChange(ReversibleChange):
         recognized.
         '''
         # Walk through the new state.
-        for x in range(self.editor.map.width):
+        for x in range(self.editor.map.Width):
             # Any changes made to this column?
             if x in self.PreviousState:
-                for y in range(self.editor.map.height):
+                for y in range(self.editor.map.Height):
                     # Any changes made to this coordinate?
                     if y in self.PreviousState[x]:
                         # Restore the state.
@@ -389,10 +389,10 @@ class PenChange(ReversibleChange):
         recognized.
         '''
         # Walk through the new state.
-        for x in range(self.editor.map.width):
+        for x in range(self.editor.map.Width):
             # Any changes made to this column?
             if x in self.NewState:
-                for y in range(self.editor.map.height):
+                for y in range(self.editor.map.Height):
                     # Any changes made to this coordinate?
                     if y in self.NewState[x]:
                         # Restore the state.
@@ -517,12 +517,12 @@ class PenTool(Tool):
         x,y = coordinates
         if x < 0 or y < 0:
             raise IndexError("Coordinates out of bounds.")
-        if x >= self.currentEditor.map.width:
+        if x >= self.currentEditor.map.Width:
             raise IndexError("Coordinates out of bounds.")
-        if y >= self.currentEditor.map.height:
+        if y >= self.currentEditor.map.Height:
             raise IndexError("Coordinates out of bounds.")
         if self.currentID < 0:
-            raise IndexError("Tile ID must be positive.")
+            raise IndexError("Tile ID must be positive (was %i)." % self.currentID)
         
         # update tile
         map = self.currentEditor.map

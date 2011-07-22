@@ -37,31 +37,7 @@ import os
 import sys
 import time
 
-if __name__ == "__main__":
-    # Try to home in on the client.
-    if os.path.exists('sprites'):
-        # Client located in the current working directory
-        print "Client located in current directory."
-    elif os.path.exists(os.path.join('..','xVClient','sprites')):
-        # Client located at ../xVClient/sprites
-        print "Client located in ../xVClient."
-        os.chdir(os.path.join('..','xVClient'))
-    elif os.path.exists(os.path.join('..','client','sprites')):
-        # Client located at ../client/sprites
-        print "Client located in ../client."
-        os.chdir(os.path.join('..','client'))
-    else:
-        # Fatal error: client not found.
-        # (Hey, at some point, let's add a config option for other locations)
-        sys.stderr.write("FATAL ERROR: client not found.")
-        sys.exit(-1)
-    # Modify the path so that we have access to other engine packages.
-    sys.path.append("../")  # TODO: Make this dynamic so it can find where the
-                            # client is installed (eg. using registry on
-                            # Windows, etc.)
-
-
-from xVMapEdit import EditorWindow, EditorGlobals
+from xVMapEdit import EditorWindow, EditorGlobals, ServerChooser
 from xVClient import Sprite, ErrorReporting
 
 
@@ -80,10 +56,13 @@ class MapEditorApp(object):
         """The main Qt application object."""
         
         self.MainWindow = None
-        """Handle to the main window object."""
+        '''Handle to the main window object.'''
         
-        self.animtimer = None
-        '''Timer for controlling animation framerates.'''
+        self.ResourcesUsed = None
+        '''Name of the server whose resources are in use.'''
+        
+        self.Sprites = None
+        '''Handle to the current sprite manager.'''
         
         self.basetime = time.time()
         '''Unix time that the program was started.'''
@@ -92,11 +71,16 @@ class MapEditorApp(object):
         """
         Loads all resources.
         """
+        # What resources are we using?
+        chooser = ServerChooser.ServerChooser(parent=None)
+        chooser.setModal(True)
+        chooser.exec_()
+        
         # Load the sprites.
         try:
-            Sprite.LoadAllSprites()
-        except Sprite.SpriteLoadFailure as e:
-            ErrorReporting.ShowError(e.args[0], ErrorReporting.FatalError)
+            self.Sprites = Sprite.SpriteManager(name=self.ResourcesUsed)
+        except Sprite.SpriteDirectoryNotFound:
+            # bail out
             sys.exit(0)
 
     def Main(self):
@@ -105,21 +89,17 @@ class MapEditorApp(object):
         """
         # okay, go ahead and engage Qt
         self.QtApp = QtGui.QApplication(sys.argv)
+        
+        # set up error reporting
+        ErrorReporting.ConfigureLogging()
 
         # load up what we need
         self.LoadResources()
-        
-        # set up the animation-control timer
-        self.animtimer = QtCore.QTimer()
-        self.animtimer.setInterval(25)
-        self.animtimer.setSingleShot(False)
-        self.QtApp.connect(self.animtimer, QtCore.SIGNAL('timeout()'), self.onAnimPulse)
 
         # and here we go! show the main window!
         self.MainWindow = EditorWindow.MainWindow()
         self.MainWindow.SetupWindow()
         self.MainWindow.show()
-        self.animtimer.start(25)
 
         # let Qt handle the event loop
         retval = self.QtApp.exec_()
@@ -132,19 +112,10 @@ class MapEditorApp(object):
         @return: The number of milliseconds since the editor started running
         '''
         return int((time.time() - self.basetime) * 1000)
-    
-    def onAnimPulse(self):
-        '''
-        Invoked by the animation timer every 25 milliseconds.  Pumps the animation frames.
-        '''
-        curtick = self.GetTick()
-        for type, spriteset in Sprite.spritesets.iteritems():
-            spriteset.PumpAnimation(curtick)
 
 
 if __name__ == "__main__":
     # Run the application.
-    print "Starting map editor..."
     app = MapEditorApp()
     EditorGlobals.MainApp = app
     retcode = app.Main()

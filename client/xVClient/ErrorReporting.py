@@ -76,11 +76,16 @@ class ErrorMessageHandler(logging.Handler):
     '''
     Logging handler that displays messages in Qt message boxes.
     '''
-    def __init__(self):
+    def __init__(self, parent=None):
         '''
         Creates a new handler.
+        
+        @type parent: QtGui.QWidget
+        @param parent: Parent widget for errors to be displayed under.
         '''
         super(ErrorMessageHandler,self).__init__()
+        self.Parent = parent
+        '''Parent widget for errors to be displayed under.'''
     
     def _ShowError(self, message):
         '''
@@ -90,23 +95,35 @@ class ErrorMessageHandler(logging.Handler):
         @param message: Message to display.
         '''
         app = ClientGlobals.Application
-        wnd = QtGui.QMessageBox(parent=app.MainWindow)
+        wnd = QtGui.QMessageBox(parent=self.Parent)
         wnd.setIcon(QtGui.QMessageBox.Critical)
         wnd.setWindowTitle("Error")
         wnd.setStandardButtons(QtGui.QMessageBox.Ok)
         wnd.setText(message)
-        wnd.show()
+        wnd.exec_()
     
     def emit(self, record):
         self._ShowError(record.getMessage())
 
-def ConfigureLogging():
+def ConfigureLogging(parent=None):
     '''
     Configures the logging mechanism to report errors as dialog boxes.
+    
+    @type parent: QtGui.QWidget
+    @param parent: Parent widget for errors to be displayed under.
     '''
-    # Set up the handler.
-    handler = ErrorMessageHandler()
+    # Set up the error handler (output to a message box).
+    handler = ErrorMessageHandler(parent)
     formatter = logging.Formatter("%(message)s")
     handler.setFormatter(formatter)
     handler.setLevel(logging.ERROR)
     mainlog.addHandler(handler)
+    
+    # Send lower-level messages to stderr.
+    lowhandler = logging.StreamHandler()
+    lowhandler.setFormatter(formatter)
+    lowhandler.setLevel(logging.DEBUG)
+    mainlog.addHandler(lowhandler)
+    
+    # Make sure that the logger catches all levels of messages.
+    mainlog.setLevel(logging.DEBUG)

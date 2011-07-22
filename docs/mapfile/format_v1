@@ -114,6 +114,7 @@ Table 2, Header Structure
 	u-int		Width
 	u-int		Height
 	u-int		Depth
+	u-int       Player/object rendering depth
 	utf-8		North-border map
 	utf-8		East-border map
 	utf-8		South-border map

@@ -19,10 +19,14 @@
 Contains code for displaying and editing a map within the editor.
 """
 
+import logging
 from xVLib import Maps
 from xVClient import MapRender, ErrorReporting
 from PyQt4 import QtCore, QtGui
-from xVMapEdit import NewMapDialogUI, EditorGlobals
+from . import EditorGlobals
+from .ui import NewMapDialogUI
+
+mainlog = logging.getLogger("")
 
 class NewMapDialog(QtGui.QDialog):
     """
@@ -79,25 +83,24 @@ class NewMapDialog(QtGui.QDialog):
         width = self.uiobj.spnWidth.value()
         height = self.uiobj.spnHeight.value()
         depth = self.uiobj.spnDepth.value()
+        playerdepth = self.uiobj.playerDepthSpin.value()
         if len(name) < 1:
             # Name cannot be blank
-            error = "The map name cannot be blank."
-            ErrorReporting.ShowError(error, ErrorReporting.WarningError)
+            msg = "The map name cannot be blank."
+            mainlog.error(msg)
             return
         if width <= 0 or height <= 0 or depth <= 0:
-            # Invalid width/height
+            # Invalid width/Height
             error = "All dimensions must be positive."
             QtGui.QMessageBox.warning(self, "Error", error)
             return
         
         # Create our new map
         try:
-            NewMap = Maps.Map(width, height, depth)
-            NewMap.header.mapname = name
+            NewMap = Maps.Map(width, height, depth, playerdepth)
+            NewMap.header.MapName = name
         except Exception:
-            ErrorReporting.ShowException(ErrorReporting.NormalError,
-                                         "Error while creating new map.",
-                                         self)
+            # fail
             return
         
         # Create the map window
@@ -176,7 +179,7 @@ class LayerSelector(QtGui.QWidget):
     @property
     def max_depth(self):
         '''
-        Property definition for getting and setting the maximum depth.
+        Property definition for getting and setting the maximum Depth.
         '''
         return self.spnLayer.getMaximum() + 1
     
@@ -256,7 +259,7 @@ class EditorWidget(QtGui.QWidget):
         # create the layer selector and add it
         self.LayerSel = LayerSelector(parent=self, value=0)
         '''The layer selector widget.'''
-        self.LayerSel.max_depth = map.depth
+        self.LayerSel.max_depth = map.Depth
         self.LayerSel.setSizePolicy(policy_edge)
         self.Layout.addWidget(self.LayerSel)
 
@@ -444,8 +447,8 @@ class EditorWidget(QtGui.QWidget):
             self.ClearUndoStack()
             self.ClearRedoStack()
         except:
-            ErrorReporting.ShowException(start_msg="Failed to save map.",
-                                         parent=self)
+            # failed, ignore
+            pass
     
     def onSaveAs(self):
         '''
@@ -534,7 +537,7 @@ class MapEditWidget(QtGui.QWidget):
         """Internal handle to the map; access this via object.map instead."""
         self.sbar = statusbar
         '''Status bar element to be updated with cursor position.'''
-        self.renderer = MapRender.MapRenderer()
+        self.renderer = MapRender.MapRenderer(mainApp.Sprites)
         '''Renderer object for our map.'''
         self._current_layer = 0
         '''Current layer (used to determine alpha blending in rendering)'''
@@ -608,7 +611,7 @@ class MapEditWidget(QtGui.QWidget):
         painter.end()
         
         # walk through the layers and render
-        for z in range(self.map.depth):
+        for z in range(self.map.Depth):
             # layers above the current are rendered with some amount of
             # transparency depending on their distance above the current
             # layer; we determine this amount here.
@@ -635,8 +638,8 @@ class MapEditWidget(QtGui.QWidget):
         startX, startY = self.selectionStartCoords
         endX, endY = self.selectionEndCoords
         if startX < 0 or startY < 0 or endX < 0 or endY < 0 or \
-            startX >= self.map.width or startY >= self.map.height or \
-            endX >= self.map.width or endY >= self.map.height:
+            startX >= self.map.Width or startY >= self.map.Height or \
+            endX >= self.map.Width or endY >= self.map.Height:
             # invalid tile coordinates
             raise InvalidSelectionException("Coordinates out of bounds.")
         
@@ -690,10 +693,10 @@ class MapEditWidget(QtGui.QWidget):
         if tStartX < 0 or tStartY < 0 or tEndX < 0 or tEndY < 0:
             # out of bounds
             raise IndexError("Selection coordinates must be positive.")
-        if tStartX >= self.map.width or tEndX >= self.map.width:
+        if tStartX >= self.map.Width or tEndX >= self.map.Width:
             # out of bounds
             raise IndexError("Selection coordinates out of bounds.")
-        if tStartY >= self.map.height or tEndY >= self.map.height:
+        if tStartY >= self.map.Height or tEndY >= self.map.Height:
             # out of bounds
             raise IndexError("Selection coordinates out of bounds.")
         
@@ -722,8 +725,8 @@ class MapEditWidget(QtGui.QWidget):
         
         @returns: A C{QtCore.QSize} object containing the size of the widget.
         """
-        width = self.map.header.width * Maps.TileWidth
-        height = self.map.header.height * Maps.TileHeight
+        width = self.map.Width * Maps.TileWidth
+        height = self.map.Height * Maps.TileHeight
         return QtCore.QSize(width, height)
     
     def mouseMoveEvent(self, event):
@@ -770,10 +773,8 @@ class MapEditWidget(QtGui.QWidget):
                         currentTool.ContinueOperation(curtile)
                         self.update()
                     except:
-                        # report the error
-                        message = "Error while continuing the tool operation."
-                        ErrorReporting.ShowException(start_msg=message, 
-                                                     parent=self.MainWindow)
+                        # ignore
+                        pass
         
         # Processing complete, update the previous tile tracker
         if tileChanged:
@@ -807,10 +808,8 @@ class MapEditWidget(QtGui.QWidget):
                 self.update()
                 self.usingTool = True
             except:
-                # Report the error.
-                message = "Error while beginning the tool operation."
-                ErrorReporting.ShowException(start_msg=message,
-                                             parent=self.MainWindow)
+                # Ignore.
+                pass
         
         # Let the widget do its usual thing with the mouse.
         super(MapEditWidget,self).mousePressEvent(event)
@@ -839,10 +838,8 @@ class MapEditWidget(QtGui.QWidget):
                 self.EditorWindow.ClearRedoStack()
                 
             except:
-                # Report the error.
-                message = "Error while ending the tool operation."
-                ErrorReporting.ShowException(start_msg=message,
-                                             parent=self.MainWindow)
+                # Ignore.
+                pass
         
         # Let the widget do its usual thing with the mouse.
         super(MapEditWidget,self).mouseReleaseEvent(event)
@@ -870,9 +867,9 @@ class MapEditWidget(QtGui.QWidget):
         x = coords[0]
         y = coords[1]
         if x < 0: x = 0
-        if x >= self.map.width: x = self.map.width - 1
+        if x >= self.map.Width: x = self.map.Width - 1
         if y < 0: y = 0
-        if y >= self.map.height: y = self.map.height - 1
+        if y >= self.map.Height: y = self.map.Height - 1
         return (x,y)
     
     @property

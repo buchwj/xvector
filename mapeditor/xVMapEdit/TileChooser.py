@@ -45,7 +45,7 @@ class TileChooserModel(object):
         self.spriteset = spriteset
         """Handle to the tileset to be displayed."""
 
-        self.selected = -1
+        self.selected = 0
         """The tile ID that is currently selected."""
 
     def SelectTile(self, id):
@@ -55,7 +55,6 @@ class TileChooserModel(object):
         # Check if the index is valid
         if id < 0 or id >= len(self.spriteset):
             # Invalid index
-            print "[WARNING WARNING WARNING]"
             raise IndexError("Tile index is out of range")
 
         # Select the tile

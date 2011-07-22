@@ -28,28 +28,8 @@ import sys
 
 mainlog = logging.getLogger("Client.Main")
 
-# Do we need to do pre-run configuration?
-if __name__ == "__main__":
-    # Modify the path so that we have access to other engine packages.
-    sys.path.append("../")
-    # Set up our working directory
-    import os
-    import os.path
-    os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
-
-    # check that xVLib is installed
-    try:
-        import xVLib
-    except ImportError:
-        msg = "FATAL ERROR: xVLib could not be found.\n"
-        msg += "Please check that xVLib is installed in the python path.\n"
-        sys.stderr.write(msg)
-        sys.exit(-1)
-    finally:
-        del xVLib
-
 from xVClient import GameWindow, ClientConfig, ErrorReporting, ClientPaths
-from xVClient import Sprite, ClientGlobals
+from xVClient import ClientGlobals
 from xVClient.BackgroundProcessing import BackgroundProcessor
 
 class ClientApplication(object):
@@ -65,6 +45,24 @@ class ClientApplication(object):
         '''Main window of the client.'''
         self.BackgroundProcessor = None
         '''Background task processor.'''
+    
+    def LoadDefaultTheme(self):
+        '''
+        Loads the default theme, replacing the current theme.
+        
+        If the stylesheet for the default theme cannot be opened, the client
+        will simply fall back on using the system theme.
+        '''
+        # open the theme
+        try:
+            themefile = open(ClientPaths.DefaultStyleSheet, "r")
+            stylesheet = themefile.read()
+            self.QtApp.setStyleSheet(stylesheet)
+        except IOError:
+            msg = "Could not read default stylesheet, using system theme."
+            mainlog.warning(msg)
+        finally:
+            themefile.close()
 
     def Main(self):
         """
@@ -82,21 +80,21 @@ class ClientApplication(object):
         # load the main configuration
         try:
             ClientConfig.LoadConfig()
-        except ClientConfig.LoadConfigError as e:
+        except ClientConfig.LoadConfigError:
             # failed to load config file
             msg = "Error while loading the main options file.\n"
             msg += traceback.format_exc()
             mainlog.error(msg)
             sys.exit(0)
+        
+        # load the default theme
+        self.LoadDefaultTheme()
 
         # create the background processor
         self.BackgroundProcessor = BackgroundProcessor(parent=self.QtApp)
 
         # set up the application basics
         self.MainWindow = GameWindow.ClientWindow()
-
-        # load needed resources
-        Sprite.LoadAllSprites()
         
         # test the error reporting
         mainlog.error("Test error message.")

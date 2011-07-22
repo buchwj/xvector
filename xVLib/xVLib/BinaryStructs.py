@@ -114,7 +114,7 @@ def DeserializeUTF8(fileobj, maxlen=0):
     
     # deserialize the string
     stringstruct = struct.Struct("<%ds" % widthbin)
-    encoded = UnpackStruct(stringstruct, fileobj)
+    encoded = UnpackStruct(stringstruct, fileobj)[0]
     
     # decode and process the string
     decoded = encoded.decode('utf-8')
@@ -146,7 +146,7 @@ def DeserializeUint32(streamobj):
     
     @return: Unsigned 32-bit integer that was read from the stream.
     """
-    return UnpackStruct(Uint32Struct, streamobj)
+    return UnpackStruct(Uint32Struct, streamobj)[0]
 
 
 def SerializeSint32(streamobj, sint):
@@ -172,7 +172,7 @@ def DeserializeSint32(streamobj):
     
     @return: Signed 32-bit integer that was read from the stream.
     '''
-    return UnpackStruct(Sint32Struct, streamobj)
+    return UnpackStruct(Sint32Struct, streamobj)[0]
 
 
 def SerializeUint16(streamobj, uint):
@@ -198,7 +198,7 @@ def DeserializeUint16(streamobj):
     
     @return: Unsigned 16-bit integer that was read from the stream.
     '''
-    return UnpackStruct(Uint16Struct, streamobj)
+    return UnpackStruct(Uint16Struct, streamobj)[0]
 
 
 def SerializeSint16(streamobj, sint):
@@ -224,10 +224,10 @@ def DeserializeSint16(streamobj):
     
     @return: Signed 16-bit integer that was read from the stream.
     '''
-    return UnpackStruct(Sint16Struct, streamobj)
+    return UnpackStruct(Sint16Struct, streamobj)[0]
 
 
-def SerializeBinary(streamobj, binary):
+def SerializeBinary(streamobj, binary, maxlen=0):
     '''
     Serializes a chunk of binary data to a stream.
     
@@ -238,13 +238,14 @@ def SerializeBinary(streamobj, binary):
     @param binary: Binary data to write to the stream.
     '''
     binlen = len(binary)
+    if maxlen > 0 and binlen > maxlen: raise MaxLengthExceeded
     binstruct = struct.Struct("<%ds" % binlen)
     tmpstr = binstruct.pack(binary)
     SerializeUint32(streamobj, binlen)
     streamobj.write(tmpstr)
 
 
-def DeserializeBinary(streamobj):
+def DeserializeBinary(streamobj, maxlen=0):
     '''
     Deserializes a chunk of binary data from a stream.
     
@@ -254,8 +255,9 @@ def DeserializeBinary(streamobj):
     @return: Binary data read from the stream.
     '''
     binlen = DeserializeUint32(streamobj)
+    if maxlen > 0 and binlen > maxlen: raise MaxLengthExceeded
     binstruct = struct.Struct("<%ds" % binlen)
-    return UnpackStruct(binstruct, streamobj)
+    return UnpackStruct(binstruct, streamobj)[0]
 
 
 def SerializeUint8(streamobj, uint):

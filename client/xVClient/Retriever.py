@@ -137,7 +137,6 @@ class Retriever(object):
         
         # Spawn an instance of HTTPFetcher.py.
         self.Args = _DetectHTTPFetcher() + (self.Host, str(self.Port))
-        print "[debug] args =", self.Args
         '''Arguments which the HTTPFetcher was started with, as a tuple.'''
         self._RestartInstance()
     

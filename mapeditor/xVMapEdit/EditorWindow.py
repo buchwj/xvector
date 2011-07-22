@@ -291,7 +291,9 @@ class MainWindow(QtGui.QMainWindow):
                      self.OnHelpAbout)
 
         # first up, the basic tilesets
-        tileset = Sprite.GetSpriteSet("tiles")
+        App = EditorGlobals.MainApp
+        
+        tileset = App.Sprites["tiles"]
         tilemodel = TileChooser.TileChooserModel(tileset)
         self.choosermodels["tiles"] = tilemodel
         tileview = TileChooser.TileChooserView(model=tilemodel)
@@ -328,7 +330,7 @@ class MainWindow(QtGui.QMainWindow):
             openedMap.LoadMapFromFile(filepath)
             editor = MapWindow.EditorWidget(map=openedMap)
             subwindow = self.ui.mdiArea.addSubWindow(editor)
-            subwindow.setWindowTitle(openedMap.header.mapname)
+            subwindow.setWindowTitle(openedMap.header.MapName)
             subwindow.show()
         except:
             # something went wrong, show the error
