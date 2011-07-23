@@ -569,6 +569,15 @@ class BaseMap(object):
         self.header.Width = width
         self.header.Height = height
         self.header.Depth = depth
+    
+    def CoordinatesInBounds(self, coords):
+        '''
+        Determines if a pair of tile coordinates are in bounds or not.
+        
+        @return: Boolean value.
+        '''
+        x, y = coords
+        return (0 <= x < self.Width) and (0 <= y < self.Height)
 
 
 class MapHeader(object):

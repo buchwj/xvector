@@ -1,20 +1,14 @@
 <RCC>
-  <qresource prefix="ResourceIcons" >
-    <file>../../res/AnimationsIcon.png</file>
-    <file>../../res/NPCsIcon.png</file>
-    <file>../../res/ItemsIcon.png</file>
-    <file>../../res/TilesIcon.png</file>
-  </qresource>
   <qresource prefix="ActionIcons" >
-    <file>../../res/help-browser.png</file>
-    <file>../../res/document-save-as.png</file>
-    <file>../../res/edit-redo.png</file>
-    <file>../../res/edit-undo.png</file>
-    <file>../../res/document-new.png</file>
-    <file>../../res/document-open.png</file>
-    <file>../../res/document-save.png</file>
-    <file>../../res/edit-copy.png</file>
-    <file>../../res/edit-cut.png</file>
-    <file>../../res/edit-paste.png</file>
+    <file>../res_editor/help-browser.png</file>
+    <file>../res_editor/document-save-as.png</file>
+    <file>../res_editor/edit-redo.png</file>
+    <file>../res_editor/edit-undo.png</file>
+    <file>../res_editor/document-new.png</file>
+    <file>../res_editor/document-open.png</file>
+    <file>../res_editor/document-save.png</file>
+    <file>../res_editor/edit-copy.png</file>
+    <file>../res_editor/edit-cut.png</file>
+    <file>../res_editor/edit-paste.png</file>
   </qresource>
 </RCC>

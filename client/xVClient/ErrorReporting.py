@@ -24,7 +24,7 @@ import traceback
 from PyQt4 import QtGui
 from xVClient import ClientGlobals
 
-mainlog = logging.getLogger("Client.Main")
+mainlog = logging.getLogger("")
 
 # Severity constants
 FatalError = 1

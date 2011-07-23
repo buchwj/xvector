@@ -57,12 +57,12 @@ class ClientApplication(object):
         try:
             themefile = open(ClientPaths.DefaultStyleSheet, "r")
             stylesheet = themefile.read()
+            themefile.close()
             self.QtApp.setStyleSheet(stylesheet)
         except IOError:
             msg = "Could not read default stylesheet, using system theme."
             mainlog.warning(msg)
-        finally:
-            themefile.close()
+            
 
     def Main(self):
         """

@@ -17,13 +17,19 @@
 
 '''
 Tool classes (select, draw, flood, etc.), and the undo/redo support classes.
+
+These tools are only for drawing tiles; objects such as NPCs and items are
+added with other mechanisms.
 '''
 
 from xVMapEdit import EditorGlobals
-from xVLib import Maps
 from PyQt4 import QtCore, QtGui
 
 import copy
+import logging
+import collections
+
+mainlog = logging.getLogger("")
 
 class ReversibleChange(object):
     '''
@@ -554,15 +560,166 @@ class PenTool(Tool):
 class RectangleDrawChange(ReversibleChange):
     '''
     ReversibleChange subclass for the Rectangle Draw tool.
+    
+    The current implementation of this has the potential to become memory
+    intensive for very large maps; it makes a copy of the entire layer
+    upon creation to use as a reference for undo operations.
     '''
-    pass    # TODO: Implement
+    
+    def __init__(self, editor):
+        # Inherit base class behavior.
+        super(RectangleDrawChange, self).__init__(editor)
+        
+        # Declare attributes.
+        self.Layer = 0
+        '''Layer to which this operation was applied.'''
+        
+        self.PreviousState = None
+        '''State of the layer prior to the operation.'''
+        
+        self.TileUsed = 0
+        '''ID of the tile used for the operation.'''
+        
+        self.StartCoords = None
+        '''Starting coordinates of the rectangle.'''
+        
+        self.EndCoords = None
+        '''Ending coordinates of the rectangle.'''
+    
+    def UndoChange(self):
+        # Copy the backup of the layer to the editor's map.
+        self.editor.map.tiles[self.Layer] = copy.deepcopy(self.PreviousState)
+    
+    def RedoChange(self):
+        # Figure out what we have to update.
+        xmin = min(self.StartCoords[0], self.EndCoords[0])
+        xmax = max(self.StartCoords[0], self.EndCoords[0])
+        ymin = min(self.StartCoords[1], self.EndCoords[1])
+        ymax = max(self.StartCoords[1], self.EndCoords[1])
+        
+        # Update.
+        targetlayer = self.editor.map.tiles[self.Layer]
+        for x in range(xmin, xmax+1):
+            for y in range(ymin, ymax+1):
+                targetlayer[x][y].tileid = self.TileUsed
 
 
 class RectangleDrawTool(Tool):
     '''
     Tool subclass for the Rectangle Draw tool.
     '''
-    pass    # TODO: Implement
+    
+    def __init__(self):
+        # Inherit base class behavior.
+        super(RectangleDrawTool, self).__init__()
+        
+        # Declare attributes.
+        self.CurrentEditor = None
+        '''Editor to which changes are currently being made.'''
+        self.CurrentOperation = None
+        '''Record of the current operation.'''
+        self.CurrentTile = 0
+        '''Current tile ID to draw.'''
+        self.StartCoords = None
+        '''Starting coordinates of the operation.'''
+        self.LatestCoords = None
+        '''Latest coordinates of the operation.'''
+        self.PreviousCoords = None
+        '''Previous coordinates of the operation.'''
+    
+    def BeginOperation(self, editor, startTileCoords):
+        # Inherit base class behavior.
+        super(RectangleDrawTool, self).BeginOperation(editor, startTileCoords)
+        
+        # Validate input.
+        if not editor.map.CoordinatesInBounds(startTileCoords):
+            msg = "Coordinates %s out of bounds." % str(startTileCoords)
+            mainlog.error(msg)
+            raise IndexError(msg)
+        
+        # Create a new record.
+        self.CurrentEditor = editor
+        
+        self.CurrentOperation = RectangleDrawChange(editor)
+        self.CurrentOperation.PreviousState = copy.deepcopy(editor.map.tiles)
+        self.CurrentOperation.Layer = editor.Layer
+        prevstate = copy.deepcopy(editor.map.tiles[editor.Layer])
+        self.CurrentOperation.PreviousState = prevstate
+        self.CurrentOperation.StartCoords = startTileCoords
+        
+        MainApp = EditorGlobals.MainApp
+        self.CurrentTile = MainApp.MainWindow.choosermodels['tiles'].selected
+        self.CurrentOperation.TileUsed = self.CurrentTile
+        
+        # Start the operation.
+        self.StartCoords = startTileCoords
+        self.LatestCoords = startTileCoords
+        self.PreviousCoords = None
+        self._UpdateMap()
+    
+    def ContinueOperation(self, nextTileCoords):
+        # Make sure there's already an operation in progress.
+        if not self.CurrentEditor:
+            msg = "RectangleDrawTool.ContinueOperation() called prematurely."
+            mainlog.error(msg)
+            raise NoOperationException(msg)
+        
+        # Validate input.
+        if not self.CurrentEditor.map.CoordinatesInBounds(nextTileCoords):
+            msg = "Coordinates %s out of bounds." % str(nextTileCoords)
+            mainlog.error(msg)
+            raise IndexError(msg)
+        
+        # Continue the operation.
+        self.PreviousCoords = self.LatestCoords
+        self.LatestCoords = nextTileCoords
+        self._UpdateMap()
+    
+    def EndOperation(self):
+        # Make sure there's already an operation in progress.
+        if not self.CurrentEditor:
+            msg = "RectangleDrawTool.EndOperation() called prematurely."
+            mainlog.error(msg)
+            raise NoOperationException(msg)
+        
+        # Finalize the record.
+        self.CurrentOperation.EndCoords = self.LatestCoords
+        record = self.CurrentOperation
+        
+        # Reset the tool state.
+        self.CurrentEditor = None
+        self.CurrentOperation = None
+        self.CurrentTile = 0
+        self.StartCoords = None
+        self.PreviousCoords = None
+        self.LatestCoords = None
+        
+        # Hand over the record.
+        return record
+    
+    def _UpdateMap(self):
+        '''Updates the map as needed.'''
+        # Any previous rectangle needing update?
+        z = self.CurrentEditor.Layer
+        if self.PreviousCoords:
+            # Temporarily reset to original state.
+            xmin = min(self.StartCoords[0], self.PreviousCoords[0])
+            xmax = max(self.StartCoords[0], self.PreviousCoords[0])
+            ymin = min(self.StartCoords[1], self.PreviousCoords[1])
+            ymax = max(self.StartCoords[1], self.PreviousCoords[1])
+            for x in range(xmin, xmax+1):
+                for y in range(ymin, ymax+1):
+                    original = self.CurrentOperation.PreviousState[x][y].tileid
+                    self.CurrentEditor.map.tiles[z][x][y].tileid = original
+        
+        # Fill the current record with the selected tile.
+        xmin = min(self.StartCoords[0], self.LatestCoords[0])
+        xmax = max(self.StartCoords[0], self.LatestCoords[0])
+        ymin = min(self.StartCoords[1], self.LatestCoords[1])
+        ymax = max(self.StartCoords[1], self.LatestCoords[1])
+        for x in range(xmin, xmax+1):
+            for y in range(ymin, ymax+1):
+                self.CurrentEditor.map.tiles[z][x][y].tileid = self.CurrentTile
 
 
 ###############################################################################
@@ -580,14 +737,156 @@ class FloodChange(ReversibleChange):
     '''
     ReversibleChange subclass for the Flood Bucket tool.
     '''
-    pass    # TODO: Implement
+    def __init__(self, editor):
+        # Inherit base class behavior.
+        super(FloodChange, self).__init__(editor)
+        
+        # Declare attributes.
+        self.Layer = 0
+        '''Layer to which this operation was applied.'''
+        self.PreviousState = None
+        '''State of the layer prior to the operation.'''
+        self.NewState = None
+        '''State of the layer following the operation.'''
+        
+    def UndoChange(self):
+        # Inherit base class behavior.
+        super(FloodChange, self).UndoChange()
+        
+        # Reverse the change.
+        self.editor.map.tiles[self.Layer] = copy.deepcopy(self.PreviousState)
+    
+    def RedoChange(self):
+        # Inherit base class behavior.
+        super(FloodChange, self).RedoChange()
+        
+        # Repeat the change.
+        self.editor.map.tiles[self.Layer] = copy.deepcopy(self.NewState)
 
 
 class FloodTool(Tool):
     '''
     Tool subclass for the Flood Bucket tool.
+    
+    This is a bit of an odd tool in that we don't actually do anything until
+    EndOperation() is called; all we really do is track where the mouse is
+    going.  Once the user releases the mouse button, we flood from the point
+    that the mouse was released.
     '''
-    pass    # TODO: Implement
+    
+    def __init__(self):
+        # Inherit base class behavior.
+        super(FloodTool, self).__init__()
+        
+        # Declare attributes.
+        self.CurrentEditor = None
+        '''Editor to which the current operation is being applied.'''
+        self.LatestPoint = None
+        '''Last point at which the mouse was located.'''
+    
+    def BeginOperation(self, editor, startTileCoords):
+        # Inherit base class behavior.
+        super(FloodTool, self).BeginOperation(editor, startTileCoords)
+        
+        # Make sure there isn't already an operation in progress.
+        if self.CurrentEditor:
+            msg = "FloodTool.BeginOperation() called during an operation."
+            mainlog.error(msg)
+            return
+        
+        # Validate input.
+        if not editor.map.CoordinatesInBounds(startTileCoords):
+            msg = "Coordinates (%i, %i) out of bounds." % startTileCoords
+            mainlog.error(msg)
+            raise IndexError(msg)
+        
+        # Begin the operation.
+        self.CurrentEditor = editor
+        self.LatestPoint = startTileCoords
+    
+    def ContinueOperation(self, nextTileCoords):
+        # Inherit base class behavior.
+        super(FloodTool, self).ContinueOperation(nextTileCoords)
+        
+        # Make sure we already have an operation in progress.
+        if not self.CurrentEditor:
+            msg = "FloodTool.ContinueOperation() called prematurely."
+            mainlog.error(msg)
+            raise NoOperationException
+        
+        # Validate input.
+        if not self.CurrentEditor.map.CoordinatesInBounds(nextTileCoords):
+            msg = "Coordinates (%i, %i) out of bounds." % nextTileCoords
+            mainlog.error(msg)
+            raise IndexError(msg)
+        
+        # Continue the operation.
+        self.LatestPoint = nextTileCoords
+    
+    def EndOperation(self):
+        # Inherit base class behavior.
+        super(FloodTool, self).EndOperation()
+        
+        # Make sure we already have an operation in progress.
+        if not self.CurrentEditor:
+            msg = "FloodTool.EndOperation() called prematurely."
+            mainlog.error(msg)
+            raise NoOperationException
+        
+        # Gather data on flood.
+        MainApp = EditorGlobals.MainApp
+        newtype = MainApp.MainWindow.choosermodels['tiles'].selected
+        
+        z = self.CurrentEditor.Layer
+        x, y = self.LatestPoint
+        oldtype = self.CurrentEditor.map.tiles[z][x][y].tileid
+        
+        # Start a record of the operation.
+        record = FloodChange(self.CurrentEditor)
+        record.PreviousState = copy.deepcopy(self.CurrentEditor.map.tiles[z])
+        
+        # Commence flood.
+        target = self.CurrentEditor.map.tiles[z]
+        visited = set()
+        to_visit = collections.deque()
+        to_visit.append(self.LatestPoint)
+        while len(to_visit) > 0:
+            # What are we looking at?
+            coords = to_visit.pop()
+            visited.add(coords)
+            curx, cury = coords
+            
+            # Continue the flood.
+            target[curx][cury].tileid = newtype
+            neighbors = self._GetNeighbors(coords)
+            for next in neighbors:
+                # Interested?
+                if next in visited: continue
+                if not self.CurrentEditor.map.CoordinatesInBounds(next):
+                    continue
+                if target[next[0]][next[1]].tileid != oldtype: continue
+                # Yes, we're interested.
+                to_visit.append(next)
+        
+        # Finish the record.
+        record.NewState = copy.deepcopy(self.CurrentEditor.map.tiles[z])
+        
+        # End the current operation.
+        self.CurrentEditor = None
+        self.LatestPoint = None
+        
+        # Hand over the record.
+        return record
+
+    def _GetNeighbors(self, coords):
+        '''Gets the adjacent (non-diagonal) tiles to the given coordinates.'''
+        neighbors = []
+        x, y = coords
+        neighbors.append((x-1,y))
+        neighbors.append((x+1,y))
+        neighbors.append((x,y-1))
+        neighbors.append((x,y+1))
+        return neighbors
 
 
 ###############################################################################
@@ -641,6 +940,8 @@ class Toolbox(dict):
         # What tool is selected?
         selected = self.MainWindow.toolToggle.currentTool
         if selected not in self:
+            msg = "Unknown tool selected with ID %i." % selected
+            mainlog.error(msg)
             raise NoToolException("Unknown tool selected.")
         return self[selected]
     

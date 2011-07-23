@@ -43,7 +43,7 @@ website.  http://code.activestate.com/recipes/82465/
 
 
 ** Icons **
-The following icons found in xVMapEdit/res:
+The following icons found in mapeditor/xVMapEdit/res:
 	* document-new.png
 	* document-open.png
 	* document-save.png
@@ -68,3 +68,17 @@ under the Creative Commons BY-SA license.  Authors of the icons:
 	Andreas Nilsson <nisses.mail@home.se>
 	Jakub Steiner <jimmac@novell.com>
 (The icons were grabbed from the gnome-icon-theme package from Fedora 14.)
+
+
+Following are from the Nuvola 1.0 icon set for KDE 3.x.
+Licensed under the GNU LGPL v2.1. http://www.icon-king.com/projects/nuvola/
+
+    * xVMapEdit/res/draw-line-2.png
+    * xVMapEdit/res/draw-fill-2.png
+
+
+Following are from the Oxygen icon set for KDE 4.
+Licensed under either GNU LGPL or CC-BY-SA 3.0.
+
+    * xVMapEdit/res/draw-rectangle-2.png
+    * xVMapEdit/res/edit-select.png

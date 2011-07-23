@@ -17,7 +17,28 @@
 
 '''
 Contains global variables used throughout the different modules.
+
+Also contains some convenience methods for loading resources.
 '''
+
+import os.path
 
 MainApp = None
 '''Global: Main application object of the editor.'''
+
+##
+## Constants
+##
+
+ResourceDirName = "res_editor"
+'''Name of the folder in which map editor resources are stored.'''
+
+
+def UIResource(name):
+    '''
+    Gets the path to the requested UI resource (icons, etc.).
+    
+    @type name: string
+    @param name: Name of the file to get from the resources.
+    '''
+    return os.path.join(os.path.split(__file__)[0], ResourceDirName, name)

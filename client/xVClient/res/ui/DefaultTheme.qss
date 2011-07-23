@@ -1,0 +1,18 @@
+/*****************************************************************************\
+ * xVector MMORPG Engine Client                                              *
+ * Copyright (c) 2011 James R. Buchwald                                      *
+ * Default Theme Stylesheet                                                  *
+ * ------------------------------------------------------------------------- *
+ * This is the Qt stylesheet for the client's default theme, used for the    *
+ * startup screen and for any servers which do not provide their own as part *
+ * of their automatic updates.  Feel free to use this as a template for      *
+ * creating a theme for your server.                                         *
+ *                                                                           *
+ * To set the theme for clients connected to your server, you can provide an *
+ * alternative stylesheet as part of your automatic updates.  After updates, *
+ * the client will look for a 'ui/Theme.qss' file in the files for your      *
+ * server; if found, it will be loaded.  If it cannot be found, the default  *
+ * theme will be used instead.                                               *
+\*****************************************************************************/
+
+

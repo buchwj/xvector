@@ -22,7 +22,8 @@ Contains the main window class for the map editor.
 from PyQt4 import QtCore, QtGui
 from .ui import MapEditorUI, MapEditorAboutUI
 from . import TileChooser, MapWindow, EditTools, EditorGlobals
-from xVClient import Sprite, ErrorReporting
+from .EditorGlobals import UIResource
+from xVClient import ErrorReporting
 from xVLib import Maps
 
 class ResourceToggle(object):
@@ -52,8 +53,7 @@ class ResourceToggle(object):
         self.ButtonGroup.setExclusive(True)
         
         self.TileButton = QtGui.QToolButton()
-        tile_icon = QtGui.QIcon()
-        tile_icon.addPixmap(QtGui.QPixmap(":/ResourceIcons/res/TilesIcon.png"))
+        tile_icon = QtGui.QIcon(UIResource("TilesIcon.png"))
         self.TileButton.setIcon(tile_icon)
         self.TileButton.setCheckable(True)
         self.TileButton.setChecked(True)
@@ -61,16 +61,14 @@ class ResourceToggle(object):
         self.ButtonGroup.addButton(self.TileButton, self.ID_Tiles)
         
         self.ItemButton = QtGui.QToolButton()
-        item_icon = QtGui.QIcon()
-        item_icon.addPixmap(QtGui.QPixmap(":/ResourceIcons/res/ItemsIcon.png"))
+        item_icon = QtGui.QIcon(UIResource("ItemsIcon.png"))
         self.ItemButton.setIcon(item_icon)
         self.ItemButton.setCheckable(True)
         self.ItemButton.setToolTip("Items")
         self.ButtonGroup.addButton(self.ItemButton, self.ID_Items)
         
         self.NPCButton = QtGui.QToolButton()
-        npc_icon = QtGui.QIcon()
-        npc_icon.addPixmap(QtGui.QPixmap(":/ResourceIcons/res/NPCsIcon.png"))
+        npc_icon = QtGui.QIcon(UIResource("NPCsIcon.png"))
         self.NPCButton.setIcon(npc_icon)
         self.NPCButton.setCheckable(True)
         self.NPCButton.setToolTip("NPCs")
@@ -140,6 +138,8 @@ class ToolToggle(object):
         self.SelectorButton = QtGui.QToolButton()
         self.SelectorButton.setCheckable(True)
         self.SelectorButton.setToolTip("Selector")
+        SelectorIcon = QtGui.QIcon(UIResource("edit-select.png"))
+        self.SelectorButton.setIcon(SelectorIcon)
         self.buttonGroup.addButton(self.SelectorButton, 
                                    EditTools.Toolbox.ID_Selector)
         
@@ -147,6 +147,8 @@ class ToolToggle(object):
         self.PenButton = QtGui.QToolButton()
         self.PenButton.setCheckable(True)
         self.PenButton.setToolTip("Pen")
+        PenIcon = QtGui.QIcon(UIResource("draw-line-2.png"))
+        self.PenButton.setIcon(PenIcon)
         self.buttonGroup.addButton(self.PenButton,
                                    EditTools.Toolbox.ID_Pen)
         
@@ -154,6 +156,8 @@ class ToolToggle(object):
         self.RectDrawButton = QtGui.QToolButton()
         self.RectDrawButton.setCheckable(True)
         self.RectDrawButton.setToolTip("Rectangle Draw")
+        RectIcon = QtGui.QIcon(UIResource("draw-rectangle-2.png"))
+        self.RectDrawButton.setIcon(RectIcon)
         self.buttonGroup.addButton(self.RectDrawButton,
                                    EditTools.Toolbox.ID_RectangleDraw)
         
@@ -161,6 +165,8 @@ class ToolToggle(object):
         self.FloodButton = QtGui.QToolButton()
         self.FloodButton.setCheckable(True)
         self.FloodButton.setToolTip("Flood Bucket")
+        FloodIcon = QtGui.QIcon(UIResource("draw-fill-2.png"))
+        self.FloodButton.setIcon(FloodIcon)
         self.buttonGroup.addButton(self.FloodButton,
                                    EditTools.Toolbox.ID_FloodBucket)
         

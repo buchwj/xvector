@@ -20,6 +20,7 @@ Contains code for displaying and editing a map within the editor.
 """
 
 import logging
+import traceback
 from xVLib import Maps
 from xVClient import MapRender, ErrorReporting
 from PyQt4 import QtCore, QtGui
@@ -773,8 +774,10 @@ class MapEditWidget(QtGui.QWidget):
                         currentTool.ContinueOperation(curtile)
                         self.update()
                     except:
-                        # ignore
-                        pass
+                        # Show a warning.
+                        msg = "Unhandled exception in mouseMoveEvent().\n"
+                        msg += traceback.format_exc()
+                        mainlog.warning(msg)
         
         # Processing complete, update the previous tile tracker
         if tileChanged:
@@ -808,8 +811,10 @@ class MapEditWidget(QtGui.QWidget):
                 self.update()
                 self.usingTool = True
             except:
-                # Ignore.
-                pass
+                # Show a warning.
+                msg = "Unhandled exception in mousePressEvent().\n"
+                msg += traceback.format_exc()
+                mainlog.warning(msg)
         
         # Let the widget do its usual thing with the mouse.
         super(MapEditWidget,self).mousePressEvent(event)
@@ -838,8 +843,10 @@ class MapEditWidget(QtGui.QWidget):
                 self.EditorWindow.ClearRedoStack()
                 
             except:
-                # Ignore.
-                pass
+                # Show a warning.
+                msg = "Unhandled exception in mouseReleaseEvent().\n"
+                msg += traceback.format_exc()
+                mainlog.warning(msg)
         
         # Let the widget do its usual thing with the mouse.
         super(MapEditWidget,self).mouseReleaseEvent(event)
