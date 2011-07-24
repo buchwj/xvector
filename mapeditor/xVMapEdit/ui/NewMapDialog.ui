@@ -80,7 +80,7 @@
           <number>1</number>
          </property>
          <property name="maximum">
-          <number>99999</number>
+          <number>2000000</number>
          </property>
          <property name="value">
           <number>16</number>
@@ -106,7 +106,7 @@
           <number>1</number>
          </property>
          <property name="maximum">
-          <number>99999</number>
+          <number>2000000</number>
          </property>
          <property name="value">
           <number>16</number>
@@ -123,10 +123,10 @@
        <item row="3" column="1">
         <widget class="QSpinBox" name="spnDepth">
          <property name="minimum">
-          <number>5</number>
+          <number>2</number>
          </property>
          <property name="maximum">
-          <number>99999999</number>
+          <number>2000000</number>
          </property>
         </widget>
        </item>
@@ -142,6 +142,9 @@
        </item>
        <item row="4" column="1">
         <widget class="QSpinBox" name="playerDepthSpin">
+         <property name="minimum">
+          <number>2</number>
+         </property>
          <property name="maximum">
           <number>4</number>
          </property>

@@ -24,7 +24,7 @@ import traceback
 from xVLib import Maps
 from xVClient import MapRender
 from PyQt4 import QtCore, QtGui
-from . import EditorGlobals, EditTools
+from . import EditorGlobals, EditTools, MapProperties
 from .ui import NewMapDialogUI
 
 mainlog = logging.getLogger("")
@@ -73,6 +73,8 @@ class NewMapDialog(QtGui.QDialog):
                      self.OnOK)
         self.connect(self.uiobj.buttonBox, QtCore.SIGNAL("rejected()"),
                      self.OnCancel)
+        self.connect(self.uiobj.spnDepth, QtCore.SIGNAL("valueChanged(int)"),
+                     self.OnDepthChange)
         self.connect(self, QtCore.SIGNAL("finished()"), self.OnCancel)
     
     def OnOK(self):
@@ -116,6 +118,13 @@ class NewMapDialog(QtGui.QDialog):
         """
         # Don't do anything
         pass
+    
+    def OnDepthChange(self, newdepth):
+        '''
+        Called when the Depth option changes.
+        '''
+        # Update the maximum value of the Player Depth option.
+        self.uiobj.playerDepthSpin.setMaximum(newdepth - 1)
 
 
 class LayerSelector(QtGui.QWidget):
@@ -445,8 +454,6 @@ class EditorWidget(QtGui.QWidget):
         Called when Save As is clicked when this window is active.
         '''
         # Pick a file path.
-        print "[debug] in onSaveAs()"
-        print traceback.format_list(traceback.extract_stack())
         caption = "Save As..."
         filter = "Map files (*.xvm);;All files (*.*)"
         self.FilePath = QtGui.QFileDialog.getSaveFileName(parent=self,
@@ -480,6 +487,20 @@ class EditorWidget(QtGui.QWidget):
         self.selection = None
         record.new_selection = self.selection
         self.PushUndoOperation(record)
+    
+    def OnMapProperties(self):
+        '''
+        Called when Map->Properties is clicked when this window is active.
+        '''
+        # Display the map properties dialog.
+        MainApp = EditorGlobals.MainApp
+        dialog = MapProperties.MapPropertiesDialog(self,
+                                                   parent=MainApp.MainWindow)
+        retcode = dialog.exec_()
+        if retcode == QtGui.QDialog.Accepted:
+            # Settings changed, clear the undo/redo stacks.
+            self.ClearUndoStack()
+            self.ClearRedoStack()
     
     @property
     def selection(self):
@@ -631,7 +652,7 @@ class MapEditWidget(QtGui.QWidget):
 
         # figure out what we need to redraw
         rect = event.rect()
-        rx1, ry1, rx2, ry2 = rect.getCoords()
+        rx1, ry1 = rect.getCoords()[0:2]
         width = rect.width()
         height = rect.height()
         targetCoords = (rx1, ry1)

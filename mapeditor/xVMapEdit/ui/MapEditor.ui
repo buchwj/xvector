@@ -376,6 +376,9 @@
    <property name="text">
     <string>&amp;Select All</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
   </action>
   <action name="action_Deselect">
    <property name="enabled">
@@ -383,6 +386,9 @@
    </property>
    <property name="text">
     <string>&amp;Deselect</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
  </widget>

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MapEditor.ui'
 #
-# Created: Tue Jun 14 11:50:39 2011
+# Created: Sun Jul 24 10:59:00 2011
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -41,7 +41,7 @@ class Ui_MapEditorWindow(object):
         self.ResourceScroll.setWidgetResizable(True)
         self.ResourceScroll.setObjectName(_fromUtf8("ResourceScroll"))
         self.ResourceArea = QtGui.QWidget()
-        self.ResourceArea.setGeometry(QtCore.QRect(0, 0, 160, 538))
+        self.ResourceArea.setGeometry(QtCore.QRect(0, 0, 160, 555))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -64,7 +64,7 @@ class Ui_MapEditorWindow(object):
         self.horizontalLayout.addWidget(self.mdiArea)
         MapEditorWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MapEditorWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 23))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menu_File = QtGui.QMenu(self.menubar)
         self.menu_File.setObjectName(_fromUtf8("menu_File"))
@@ -220,6 +220,7 @@ class Ui_MapEditorWindow(object):
         self.action_Save.setText(QtGui.QApplication.translate("MapEditorWindow", "&Save", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Save.setShortcut(QtGui.QApplication.translate("MapEditorWindow", "Ctrl+S", None, QtGui.QApplication.UnicodeUTF8))
         self.action_SaveAs.setText(QtGui.QApplication.translate("MapEditorWindow", "S&ave As...", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_SaveAs.setShortcut(QtGui.QApplication.translate("MapEditorWindow", "Ctrl+Shift+S", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Quit.setText(QtGui.QApplication.translate("MapEditorWindow", "&Quit", None, QtGui.QApplication.UnicodeUTF8))
         self.actionNone.setText(QtGui.QApplication.translate("MapEditorWindow", "None", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Properties.setText(QtGui.QApplication.translate("MapEditorWindow", "&Properties...", None, QtGui.QApplication.UnicodeUTF8))
@@ -234,6 +235,8 @@ class Ui_MapEditorWindow(object):
         self.action_Tile_Windows.setText(QtGui.QApplication.translate("MapEditorWindow", "&Tile Windows", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Cascade_Windows.setText(QtGui.QApplication.translate("MapEditorWindow", "&Cascade Windows", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Select_All.setText(QtGui.QApplication.translate("MapEditorWindow", "&Select All", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Select_All.setShortcut(QtGui.QApplication.translate("MapEditorWindow", "Ctrl+A", None, QtGui.QApplication.UnicodeUTF8))
         self.action_Deselect.setText(QtGui.QApplication.translate("MapEditorWindow", "&Deselect", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_Deselect.setShortcut(QtGui.QApplication.translate("MapEditorWindow", "Ctrl+D", None, QtGui.QApplication.UnicodeUTF8))
 
 import MapEditor_rc

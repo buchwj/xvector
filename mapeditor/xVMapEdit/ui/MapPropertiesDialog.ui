@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MapPropertiesDialog</class>
+ <widget class="QDialog" name="MapPropertiesDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>288</width>
+    <height>260</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Map Properties</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="GeneralTab">
+      <attribute name="title">
+       <string>&amp;General</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QFormLayout" name="formLayout">
+         <property name="labelAlignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="mapNameLabel">
+           <property name="whatsThis">
+            <string>The name of this map.  This may be displayed at the top of the client and should be human-readable.</string>
+           </property>
+           <property name="text">
+            <string>Map Name:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="MapNameEdit"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="backgroundImageLabel">
+           <property name="whatsThis">
+            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;(Optional) The name of an image file to show behind the map.  This file must be in the &lt;span style=&quot; font-style:italic;&quot;&gt;Backgrounds&lt;/span&gt; folder of your server's resources.  Leave blank to use the default black background.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Background Image:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="BackgroundImageEdit"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="northBorderLabel">
+           <property name="whatsThis">
+            <string>(Optional) The filename of the map which lies along the north border of this map.  The specified map must have the same width as this map.  Leave blank to use none.</string>
+           </property>
+           <property name="text">
+            <string>North Border:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="NorthBorderEdit"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="eastBorderLabel">
+           <property name="whatsThis">
+            <string>(Optional) The filename of the map which lies along the east border of this map.  The specified map must have the same height as this map.  Leave blank to use none.</string>
+           </property>
+           <property name="text">
+            <string>East Border</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="EastBorderEdit"/>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="southBorderLabel">
+           <property name="whatsThis">
+            <string>(Optional) The filename of the map which lies along the south border of this map.  The specified map must have the same width as this map.  Leave blank to use none.</string>
+           </property>
+           <property name="text">
+            <string>South Border:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="SouthBorderEdit"/>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="westBorderLabel">
+           <property name="whatsThis">
+            <string>(Optional) The filename of the map which lies along the west border of this map.  The specified map must have the same height as this map.  Leave blank to use none.</string>
+           </property>
+           <property name="text">
+            <string>West Border:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="WestBorderEdit"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="DimensionsTab">
+      <attribute name="title">
+       <string>&amp;Dimensions</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <layout class="QFormLayout" name="formLayout_2">
+         <property name="labelAlignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="widthLabel">
+           <property name="whatsThis">
+            <string>The width of this map, in tiles.  Must be greater than zero.</string>
+           </property>
+           <property name="text">
+            <string>Width:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="WidthSpin">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>2000000</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="heightLabel">
+           <property name="whatsThis">
+            <string>The height of this map, in tiles.  Must be greater than zero.</string>
+           </property>
+           <property name="text">
+            <string>Height:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QSpinBox" name="HeightSpin">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>2000000</number>
+           </property>
+           <property name="singleStep">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="depthLabel">
+           <property name="whatsThis">
+            <string>The number of layers which this map consists of.  Must be at least 2.</string>
+           </property>
+           <property name="text">
+            <string>Depth:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QSpinBox" name="DepthSpin">
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="maximum">
+            <number>2000000</number>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="playerDepthLabel">
+           <property name="whatsThis">
+            <string>The layer at which objects (such as players, items, and NPCs) are shown.  Layers are numbered starting from 0.  Layers below the player depth will be obscured by any objects; likewise, the objects will be obscured by the layers above this.  Must be at least 2.</string>
+           </property>
+           <property name="text">
+            <string>Player Depth:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QSpinBox" name="PlayerDepthSpin">
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="maximum">
+            <number>2000000</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>MapPropertiesDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>MapPropertiesDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

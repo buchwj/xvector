@@ -76,10 +76,13 @@ class Tile(object):
     EndOfTilesFlag = 1073741824
     '''Flag which signals that there are no more tiles in the map file.'''
 
-    def __init__(self):
+    def __init__(self, coords=(0,0,0)):
         """
         Creates a new tile with the given layers.  A value of -1 for any layer
         indicates an empty layer.
+        
+        @type coords: tuple
+        @param coords: Coordinates of the new tile as (x,y,z)
         """
         # Set default values
         self.x = 0
@@ -90,7 +93,8 @@ class Tile(object):
         '''Depth (layer) of tile'''
         self.tileid = 0
         '''ID of the tile sprite to draw.'''
-    
+        
+        self.x, self.y, self.z = coords
     
     def Serialize(self, fileobj):
         """
@@ -281,7 +285,19 @@ class BaseMap(object):
                     tile.y = y
                     tile.z = z
                     self.tiles[z][x].append(tile)
-        
+    
+    @property
+    def MapName(self):
+        '''
+        Convenience property connected to the map name.
+        The actual value is stored in the header.
+        '''
+        return self.header.MapName
+    
+    @MapName.setter
+    def MapName(self, newname):
+        self.header.MapName = newname
+    
     @property
     def Width(self):
         """
@@ -373,6 +389,18 @@ class BaseMap(object):
     @WestMap.setter
     def WestMap(self, westmap):
         self.header.WestMap = westmap
+
+    @property
+    def BackgroundImage(self):
+        '''
+        Convenience property connected to the background image.
+        This value is actually stored in the header.
+        '''
+        return self.header.BackgroundImage
+    
+    @BackgroundImage.setter
+    def BackgroundImage(self, newimage):
+        self.header.BackgroundImage = newimage
 
     def LoadMapFromFile(self, filepath):
         """
@@ -512,62 +540,53 @@ class BaseMap(object):
         @type Height: integer
         @param Height: New Height, in tiles, of the map.
         """
-        # check the dimensions
-        if width <= 0 or height <= 0 or depth <= 0:
-            # invalid dimensions
-            raise IndexError("map dimensions must be greater than 0")
+        # Do we need to change the height?
+        if height < self.Height:
+            # Shrink the columns.
+            for z in range(self.Depth):
+                for x in range(self.Width):
+                    self.tiles[z][x] = self.tiles[z][x][:height]
+        elif height > self.Height:
+            # Grow the columns.
+            for z in range(self.Depth):
+                for x in range(self.Width):
+                    for y in range(len(self.tiles[z][x]), height):
+                        newtile = Tile((x,y,z))
+                        self.tiles[z][x].append(newtile)
+        self.Height = height
         
-        # are we increasing in Depth?
-        if depth > self.header.Depth:
-            # add and fill new Z components
-            for z in range(self.header.Depth, depth):
-                self.tiles[z].insert(z,[])
-                for x in range(self.header.Width):
-                    self.tiles[z].insert(x,[])
-                    for y in range(self.header.Height):
-                        # insert a new blank tile
-                        self.tiles[z][x].insert(y,Tile())
-        # if not, then are we decreasing in Depth?
-        elif depth < self.header.Depth:
-            # destroy the Z components
-            for z in range(depth, self.header.Depth):
-                del self.tiles[z]
+        # Do we need to change the width?
+        if width < self.Width:
+            # Shrink the rows.
+            for z in range(self.Depth):
+                self.tiles[z] = self.tiles[z][:width]
+        elif width > self.Width:
+            # Grow the rows.
+            for z in range(self.Depth):
+                for x in range(len(self.tiles[z]), width):
+                    newrow = []
+                    for y in range(self.Height):
+                        newtile = Tile((x,y,z))
+                        newrow.append(newtile)
+                    self.tiles[z].append(newrow)
+        self.Width = width
         
-        # are we increasing in Width?
-        if width > self.header.Width:
-            # add and fill new X components
-            for z in range(depth):
-                for x in range(self.header.Width, width):
-                    self.tiles[z].insert(x,[])
-                    for y in range(self.header.Height):
-                        # insert a new blank tile
-                        self.tiles[z][x].insert(y,Tile())
-        # if not, then are we decreasing in Width?
-        elif width < self.header.Width:
-            # destroy the X components
-            for z in range(depth):
-                for x in range(width, self.header.Width):
-                    del self.tiles[z][x]
-        
-        # now check the Height - is it increasing?
-        if height > self.header.Height:
-            # add new Y components
-            for y in range(self.header.Height, height):
-                for x in range(width):
-                    for z in range(depth):
-                        self.tiles[z][x].insert(y,Tile())
-        # if not, are we decreasing in Height?
-        elif height < self.header.Height:
-            # destroy some Y components
-            for y in range(height, self.header.Height):
-                for x in range(width):
-                    for z in range(depth):
-                        del self.tiles[z][x][y]
-        
-        # update the dimensions in the header
-        self.header.Width = width
-        self.header.Height = height
-        self.header.Depth = depth
+        # Do we need to change the depth?
+        if depth < self.Depth:
+            # Annihilate some layers.
+            self.tiles = self.tiles[:depth]
+        elif depth > self.Depth:
+            # Make some new layers.
+            for z in range(len(self.tiles), depth):
+                newlayer = []
+                for x in range(self.Width):
+                    newrow = []
+                    for y in range(self.Height):
+                        newtile = Tile((x,y,z))
+                        newrow.append(newtile)
+                    newlayer.append(newrow)
+                self.tiles.append(newlayer)
+        self.Depth = depth
     
     def CoordinatesInBounds(self, coords):
         '''

@@ -432,8 +432,10 @@ class MainWindow(QtGui.QMainWindow):
         """
         Called when the menu item Map->Properties... is clicked.
         """
-        # TODO: Implement
-        pass
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow: return
+        subwindow.widget().OnMapProperties()
 
     def OnHelpContents(self):
         """
