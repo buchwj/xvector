@@ -16,4 +16,4 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 __all__ = ['MapEditor_rc', 'MapEditorAboutUI', 'MapEditorPropertiesUI',
-           'MapEditorUI', 'NewMapDialogUI']
+           'MapEditorUI', 'NewMapDialogUI', 'ServerChooserUI']

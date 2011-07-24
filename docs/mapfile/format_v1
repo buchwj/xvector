@@ -119,6 +119,7 @@ Table 2, Header Structure
 	utf-8		East-border map
 	utf-8		South-border map
 	utf-8		West-border map
+	utf-8       Background image
 
 	
 =======
@@ -132,8 +133,7 @@ Table 3, Tile Flags
 
 	bit			flag
 	----		-----
-	0			blocked (players and NPCs cannot pass through tile if set)
-	1..29		unused
+	0..29		unused
 	30			end-of-tiles (notifies the loader that there are no more tiles)
 
 This is then followed by the tile structure.

@@ -22,9 +22,9 @@ Contains code for displaying and editing a map within the editor.
 import logging
 import traceback
 from xVLib import Maps
-from xVClient import MapRender, ErrorReporting
+from xVClient import MapRender
 from PyQt4 import QtCore, QtGui
-from . import EditorGlobals
+from . import EditorGlobals, EditTools
 from .ui import NewMapDialogUI
 
 mainlog = logging.getLogger("")
@@ -310,7 +310,7 @@ class EditorWidget(QtGui.QWidget):
         self.UndoStack.append(change)
         
         # update
-        self._UpdateUndoRedoButtons()
+        self.UpdateMenuActions()
     
     def PopUndoOperation(self):
         '''
@@ -326,7 +326,7 @@ class EditorWidget(QtGui.QWidget):
         popped = self.UndoStack.pop()
         
         # update
-        self._UpdateUndoRedoButtons()
+        self.UpdateMenuActions()
         
         # finish
         return popped
@@ -336,7 +336,7 @@ class EditorWidget(QtGui.QWidget):
         Clears the undo stack.
         '''
         self.UndoStack = []
-        self._UpdateUndoRedoButtons()
+        self.UpdateMenuActions()
     
     def PushRedoOperation(self, change):
         '''
@@ -346,7 +346,7 @@ class EditorWidget(QtGui.QWidget):
         @param change: Operation to push onto the redo stack.
         '''
         self.RedoStack.append(change)
-        self._UpdateUndoRedoButtons()
+        self.UpdateMenuActions()
     
     def PopRedoOperation(self):
         '''
@@ -359,7 +359,7 @@ class EditorWidget(QtGui.QWidget):
         @return: The top operation from the redo stack.
         '''
         popped = self.RedoStack.pop()
-        self._UpdateUndoRedoButtons()
+        self.UpdateMenuActions()
         return popped
     
     def ClearRedoStack(self):
@@ -367,33 +367,21 @@ class EditorWidget(QtGui.QWidget):
         Clears the redo stack.
         '''
         self.RedoStack = []
-        self._UpdateUndoRedoButtons()
-        
-    def _UpdateUndoRedoButtons(self):
-        '''
-        Enables or disables the Undo and Redo buttons as necessary.
-        '''
-        # what can we do?
-        canUndo = len(self.UndoStack) > 0
-        canRedo = len(self.RedoStack) > 0
-        
-        # update buttons
-        self.MainWindow.ui.action_Undo.setEnabled(canUndo)
-        self.MainWindow.ui.action_Redo.setEnabled(canRedo)
+        self.UpdateMenuActions()
     
     def focusInEvent(self, event):
         '''
         Called when this window gains focus.
         
         This is a reimplemented method from Qt 4.  We use it to ensure that
-        the undo and redo buttons are properly updated for this window's map
-        when it gains focus.
+        the menu buttons are properly updated for this window's map when it
+        gains focus.
         
         @type event: C{QtGui.QFocusEvent}
         @param event: Focus event from Qt 4.
         '''
-        # Update the undo/redo buttons.
-        self._UpdateUndoRedoButtons()
+        # Update the menu actions.
+        self.UpdateMenuActions()
         
         # Let the window do its usual thing.
         super(EditorWidget,self).focusInEvent(event)
@@ -439,6 +427,7 @@ class EditorWidget(QtGui.QWidget):
         # Has the file been saved yet?
         if not self.FilePath:
             # No, we'll need to "Save As..."
+            print "[debug] calling onSaveAs()"
             self.onSaveAs()
             return
         
@@ -456,6 +445,8 @@ class EditorWidget(QtGui.QWidget):
         Called when Save As is clicked when this window is active.
         '''
         # Pick a file path.
+        print "[debug] in onSaveAs()"
+        print traceback.format_list(traceback.extract_stack())
         caption = "Save As..."
         filter = "Map files (*.xvm);;All files (*.*)"
         self.FilePath = QtGui.QFileDialog.getSaveFileName(parent=self,
@@ -467,7 +458,29 @@ class EditorWidget(QtGui.QWidget):
         
         # Okay, we have a file path, now actually save the file
         self.onSave()
-        
+    
+    def OnSelectAll(self):
+        '''
+        Called when Select All is clicked when this window is active.
+        '''
+        # Select everything and make a record of it.
+        record = EditTools.SelectorChange(self)
+        record.previous_selection = self.selection
+        self.selection = ((0,0), (self.map.Width - 1, self.map.Height - 1))
+        record.new_selection = self.selection
+        self.PushUndoOperation(record)
+    
+    def OnDeselect(self):
+        '''
+        Called when Deselect is clicked when this window is active.
+        '''
+        # Deselect everything and make a record of it.
+        record = EditTools.SelectorChange(self)
+        record.previous_selection = self.selection
+        self.selection = None
+        record.new_selection = self.selection
+        self.PushUndoOperation(record)
+    
     @property
     def selection(self):
         '''
@@ -479,6 +492,7 @@ class EditorWidget(QtGui.QWidget):
     @selection.setter
     def selection(self, select):
         self.MapWidget.selection = select
+        self.UpdateMenuActions()
     
     @property
     def Layer(self):
@@ -501,6 +515,28 @@ class EditorWidget(QtGui.QWidget):
     @map.setter
     def map(self, newmap):
         self.MapWidget.map = newmap
+    
+    def UpdateMenuActions(self):
+        '''
+        Enables and disables the appropriate menu actions for this widget.
+        '''
+        MainApp = EditorGlobals.MainApp
+        
+        # Options that are always enabled
+        MainApp.MainWindow.ui.action_Select_All.setEnabled(True)
+        
+        # Undo/Redo
+        canUndo = len(self.UndoStack) > 0
+        canRedo = len(self.RedoStack) > 0
+        MainApp.MainWindow.ui.action_Undo.setEnabled(canUndo)
+        MainApp.MainWindow.ui.action_Redo.setEnabled(canRedo)
+        
+        # Options that need a selection to be made
+        hasSelection = bool(self.selection)
+        MainApp.MainWindow.ui.action_Copy.setEnabled(hasSelection)
+        MainApp.MainWindow.ui.actionC_ut.setEnabled(hasSelection)
+        MainApp.MainWindow.ui.action_Paste.setEnabled(hasSelection)
+        MainApp.MainWindow.ui.action_Deselect.setEnabled(hasSelection)
 
 
 class MapEditWidget(QtGui.QWidget):

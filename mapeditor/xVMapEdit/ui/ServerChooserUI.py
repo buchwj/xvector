@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ServerChooser.ui'
 #
-# Created: Fri Jul 22 14:14:01 2011
+# Created: Sat Jul 23 15:02:24 2011
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,6 +26,7 @@ class Ui_ServerChooserDialog(object):
         self.InstructionsLabel.setObjectName(_fromUtf8("InstructionsLabel"))
         self.verticalLayout.addWidget(self.InstructionsLabel)
         self.ResourcesList = QtGui.QListView(ServerChooserDialog)
+        self.ResourcesList.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.ResourcesList.setObjectName(_fromUtf8("ResourcesList"))
         self.verticalLayout.addWidget(self.ResourcesList)
         self.horizontalLayout = QtGui.QHBoxLayout()

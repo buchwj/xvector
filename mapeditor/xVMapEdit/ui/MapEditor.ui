@@ -59,7 +59,7 @@
          <x>0</x>
          <y>0</y>
          <width>160</width>
-         <height>538</height>
+         <height>555</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -107,7 +107,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>27</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -185,7 +185,7 @@
   </widget>
   <action name="action_Contents">
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/help-browser.png</normaloff>:/ActionIcons/res/help-browser.png</iconset>
    </property>
    <property name="text">
@@ -205,7 +205,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/edit-copy.png</normaloff>:/ActionIcons/res/edit-copy.png</iconset>
    </property>
    <property name="text">
@@ -220,7 +220,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/edit-cut.png</normaloff>:/ActionIcons/res/edit-cut.png</iconset>
    </property>
    <property name="text">
@@ -235,7 +235,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/edit-paste.png</normaloff>:/ActionIcons/res/edit-paste.png</iconset>
    </property>
    <property name="text">
@@ -247,7 +247,7 @@
   </action>
   <action name="action_New">
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/document-new.png</normaloff>:/ActionIcons/res/document-new.png</iconset>
    </property>
    <property name="text">
@@ -259,7 +259,7 @@
   </action>
   <action name="action_Open">
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/document-open.png</normaloff>:/ActionIcons/res/document-open.png</iconset>
    </property>
    <property name="text">
@@ -271,7 +271,7 @@
   </action>
   <action name="action_Save">
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/document-save.png</normaloff>:/ActionIcons/res/document-save.png</iconset>
    </property>
    <property name="text">
@@ -283,11 +283,14 @@
   </action>
   <action name="action_SaveAs">
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/document-save-as.png</normaloff>:/ActionIcons/res/document-save-as.png</iconset>
    </property>
    <property name="text">
     <string>S&amp;ave As...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
   <action name="action_Quit">
@@ -321,7 +324,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/edit-undo.png</normaloff>:/ActionIcons/res/edit-undo.png</iconset>
    </property>
    <property name="text">
@@ -336,7 +339,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="MapEditor.qrc">
+    <iconset>
      <normaloff>:/ActionIcons/res/edit-redo.png</normaloff>:/ActionIcons/res/edit-redo.png</iconset>
    </property>
    <property name="text">

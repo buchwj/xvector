@@ -26,6 +26,17 @@ long_description += "experience while also providing developers with a "
 long_description += "powerful plugin and scripting API.  This package provides"
 long_description += " the map editor used to develop content for the engine."
 
+# okay, we need to find our data files
+import os
+resfiles = []
+startpath = os.path.join("xVMapEdit", "res_editor")
+for triple in os.walk(startpath):
+    base = os.path.relpath(triple[0], "xVMapEdit")
+    dirfiles = triple[2]
+    for singlefile in dirfiles:
+        if singlefile[len(singlefile)-1] != '~':
+            resfiles.append(os.path.join(base, singlefile))
+
 setup(name='xVMapEdit',
       author='James R. Buchwald',
       author_email='buchwj@rpi.edu',
@@ -46,9 +57,10 @@ setup(name='xVMapEdit',
         "Topic :: Games/Entertainment :: Role-Playing",
       ],
       
-      packages=['xVMapEdit'],
+      packages=['xVMapEdit', 'xVMapEdit.ui'],
       scripts=['xVMapEdit/MapEditor.py'],
-      package_data={'xVMapEdit.ui': ['*.ui']},
+      package_data={'xVMapEdit.ui': ['*.ui'],
+                    'xVMapEdit': resfiles},
       data_files=[('', ['LICENSE', 'CREDITS', 'KNOWN-ISSUES'])],
       requires=['xVClient (==0.0.1)', 'xVLib (==0.0.1)'],
       provides=['xVMapEdit'],

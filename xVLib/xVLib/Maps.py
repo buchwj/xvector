@@ -73,8 +73,6 @@ class Tile(object):
     """
     
     # Tile flags.
-    BlockedFlag = 1
-    '''Flag which signals that a tile is blocked.'''
     EndOfTilesFlag = 1073741824
     '''Flag which signals that there are no more tiles in the map file.'''
 
@@ -82,8 +80,6 @@ class Tile(object):
         """
         Creates a new tile with the given layers.  A value of -1 for any layer
         indicates an empty layer.
-        
-        @keyword blocked: If C{True}, this tile is impassable.
         """
         # Set default values
         self.x = 0
@@ -92,8 +88,6 @@ class Tile(object):
         '''Y-coordinate of tile'''
         self.z = 0
         '''Depth (layer) of tile'''
-        self.blocked = False
-        '''If true, tile is impassible.'''
         self.tileid = 0
         '''ID of the tile sprite to draw.'''
     
@@ -107,26 +101,33 @@ class Tile(object):
         """
         # pack all of the flags
         flags = 0
-        if self.blocked:
-            flags |= self.BlockedFlag
         try:
             BinaryStructs.SerializeUint32(fileobj, flags)
-        except Exception as e:
-            raise IOError("error while writing to map file", e)
+        except:
+            msg = "An error occurred while writing to the map file.\n"
+            msg += traceback.format_exc()
+            mainlog.error(msg)
+            raise IOError(msg)
         
         # write the coordinates
         try:
             BinaryStructs.SerializeUint32(fileobj, self.x)
             BinaryStructs.SerializeUint32(fileobj, self.y)
             BinaryStructs.SerializeUint32(fileobj, self.z)
-        except Exception as e:
-            raise IOError("error while writing to map file", e)
+        except:
+            msg = "An error occurred while writing to the map file.\n"
+            msg += traceback.format_exc()
+            mainlog.error(msg)
+            raise IOError(msg)
         
         # write the tile information
         try:
             BinaryStructs.SerializeUint32(fileobj, self.tileid)
-        except Exception as e:
-            raise IOError("error while writing to map file", e)
+        except:
+            msg = "An error occurred while writing to the map file.\n"
+            msg += traceback.format_exc()
+            mainlog.error(msg)
+            raise IOError(msg)
     
     def Deserialize(self, fileobj, formatver=CurrentMapVersion):
         """
@@ -148,8 +149,9 @@ class Tile(object):
             self._Deserialize_CurrentVer(fileobj)
         elif formatver > CurrentMapVersion:
             # unsupported future version
-            msg = "Unsupported future version of the map file format. "
+            msg = "Unsupported future version of the map file format.\n"
             msg += "Check if a newer version of the program is available."
+            mainlog.error(msg)
             raise FutureFormatException(msg)
         return self
     
@@ -168,10 +170,7 @@ class Tile(object):
         # Check for the end-of-tiles flag.
         if flags & self.EndOfTilesFlag:
             # End of tiles.
-            raise EndOfSectionException()
-        
-        # And now the normal flags...
-        self.blocked = bool(flags & self.BlockedFlag)
+            raise EndOfSectionException
         
         # Read in the rest of the title data.
         # Validation should happen in the map deserialization (since it has
@@ -184,7 +183,7 @@ class Tile(object):
             self.tileid = BinaryStructs.DeserializeUint32(fileobj)
         except Exception as e:
             raise MapError("invalid/corrupt map file", e)
-            
+
 
 class BaseMap(object):
     """
@@ -619,6 +618,9 @@ class MapHeader(object):
         self.WestMap = u""
         """Name of the map that lies along the western border."""
         
+        self.BackgroundImage = u""
+        '''Optional background image to display behind the map.'''
+        
         self.Stripped = False
         """If true, the server has removed data from this map."""
     
@@ -634,8 +636,6 @@ class MapHeader(object):
         """
         # nothing too special, just write everything in the right order
         try:
-            print "[debug] serializing map header"
-            print "[debug] map name is", self.MapName
             BinaryStructs.SerializeUTF8(fileobj, self.MapName)
             BinaryStructs.SerializeUint32(fileobj, self.Width)
             BinaryStructs.SerializeUint32(fileobj, self.Height)
@@ -645,6 +645,7 @@ class MapHeader(object):
             BinaryStructs.SerializeUTF8(fileobj, self.EastMap)
             BinaryStructs.SerializeUTF8(fileobj, self.SouthMap)
             BinaryStructs.SerializeUTF8(fileobj, self.WestMap)
+            BinaryStructs.SerializeUTF8(fileobj, self.BackgroundImage)
         except Exception as e:
             raise IOError("error while writing to map file", e)
         
@@ -703,6 +704,8 @@ class MapHeader(object):
                 self.SouthMap.strip()
                 self.WestMap = BinaryStructs.DeserializeUTF8(fileobj)
                 self.WestMap.strip()
+                self.BackgroundImage = BinaryStructs.DeserializeUTF8(fileobj)
+                self.BackgroundImage.strip()
             except Exception as e:
                 raise MapError("Map file is invalid/corrupt.", e)
             

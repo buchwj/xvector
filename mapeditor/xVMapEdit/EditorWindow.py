@@ -273,7 +273,7 @@ class MainWindow(QtGui.QMainWindow):
                      self.OnFileOpen)
         self.connect(self.ui.action_Save, QtCore.SIGNAL("triggered()"),
                      self.OnFileSave)
-        self.connect(self.ui.action_Save, QtCore.SIGNAL("triggered()"),
+        self.connect(self.ui.action_SaveAs, QtCore.SIGNAL("triggered()"),
                      self.OnFileSaveAs)
         self.connect(self.ui.actionClose, QtCore.SIGNAL("triggered()"),
                      self.OnFileClose)
@@ -289,6 +289,10 @@ class MainWindow(QtGui.QMainWindow):
                      self.OnEditCut)
         self.connect(self.ui.action_Paste, QtCore.SIGNAL("triggered()"),
                      self.OnEditPaste)
+        self.connect(self.ui.action_Select_All, QtCore.SIGNAL("triggered()"),
+                     self.OnSelectAll)
+        self.connect(self.ui.action_Deselect, QtCore.SIGNAL("triggered()"),
+                     self.OnDeselect)
         self.connect(self.ui.action_Properties, QtCore.SIGNAL("triggered()"),
                      self.OnMapProperties)
         self.connect(self.ui.action_Contents, QtCore.SIGNAL("triggered()"),
@@ -335,6 +339,7 @@ class MainWindow(QtGui.QMainWindow):
         try:
             openedMap.LoadMapFromFile(filepath)
             editor = MapWindow.EditorWidget(map=openedMap)
+            editor.FilePath = filepath
             subwindow = self.ui.mdiArea.addSubWindow(editor)
             subwindow.setWindowTitle(openedMap.header.MapName)
             subwindow.show()
@@ -453,6 +458,24 @@ class MainWindow(QtGui.QMainWindow):
         '''
         # Destroy whatever we already have in the Window menu.
         pass    # TODO: Implement
+    
+    def OnSelectAll(self):
+        '''
+        Called when the menu item Edit->Select All is clicked.
+        '''
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow: return
+        subwindow.widget().OnSelectAll()
+    
+    def OnDeselect(self):
+        '''
+        Called when the menu item Edit->Deselect is clicked.
+        '''
+        # Which sub-window is active?
+        subwindow = self.ui.mdiArea.activeSubWindow()
+        if not subwindow: return
+        subwindow.widget().OnDeselect()
 
 class AboutDialog(QtGui.QDialog):
     """
