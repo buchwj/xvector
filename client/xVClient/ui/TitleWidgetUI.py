@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'TitleWidget.ui'
 #
-# Created: Wed Jul 13 22:47:51 2011
+# Created: Mon Jul 25 18:40:11 2011
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -18,7 +18,7 @@ class Ui_TitleWidget(object):
     def setupUi(self, TitleWidget):
         TitleWidget.setObjectName(_fromUtf8("TitleWidget"))
         TitleWidget.resize(250, 300)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(TitleWidget.sizePolicy().hasHeightForWidth())
@@ -26,7 +26,7 @@ class Ui_TitleWidget(object):
         self.verticalLayout = QtGui.QVBoxLayout(TitleWidget)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.btnPublic = QtGui.QPushButton(TitleWidget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.btnPublic.sizePolicy().hasHeightForWidth())
@@ -38,7 +38,7 @@ class Ui_TitleWidget(object):
         self.btnPublic.setObjectName(_fromUtf8("btnPublic"))
         self.verticalLayout.addWidget(self.btnPublic)
         self.btnPrivate = QtGui.QPushButton(TitleWidget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.btnPrivate.sizePolicy().hasHeightForWidth())
@@ -50,7 +50,7 @@ class Ui_TitleWidget(object):
         self.btnPrivate.setObjectName(_fromUtf8("btnPrivate"))
         self.verticalLayout.addWidget(self.btnPrivate)
         self.btnSettings = QtGui.QPushButton(TitleWidget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.btnSettings.sizePolicy().hasHeightForWidth())
@@ -62,7 +62,7 @@ class Ui_TitleWidget(object):
         self.btnSettings.setObjectName(_fromUtf8("btnSettings"))
         self.verticalLayout.addWidget(self.btnSettings)
         self.btnExit = QtGui.QPushButton(TitleWidget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.btnExit.sizePolicy().hasHeightForWidth())

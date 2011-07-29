@@ -25,7 +25,6 @@ import logging
 import traceback
 import asyncore
 import socket
-import cStringIO
 
 from xVLib import Networking, Packets
 from xVServer import ServerGlobals
@@ -37,30 +36,21 @@ class ConnectionClosed(Exception): pass
 '''Raised when a connection is closed.'''
 
 
-class ServerConnection(asyncore.dispatcher_with_send):
+class ServerConnection(Networking.BaseConnectionHandler):
     '''
     Server-side connection handler for a single connection.
-    
-    Although not explicitly inheriting from it, this class implements the
-    xVLib.BaseConnectionHandler interface.
     '''
-    def __init__(self, sock=None, map=None):
+    def __init__(self, sock=None):
         '''
         Creates a new server-side connection handler.
         
         @type sock: socket
         @param sock: Connected socket to wrap
-        
-        @type map: dict
-        @param map: Tracking structure for asyncore.
         '''
         # inherit base class behavior
-        asyncore.dispatcher_with_send.__init__(self, sock, map)
+        Networking.BaseConnectionHandler.__init__(self, sock)
         
         # declare our network attributes
-        self.sock = sock
-        '''Socket connected to the remote machine.'''
-        
         self.Address = sock.getpeername()
         '''Network address of the remote machine.'''
         
@@ -72,34 +62,6 @@ class ServerConnection(asyncore.dispatcher_with_send):
             App.Connections.AddConnection(self)
         except ConnectionLimitExceeded:
             self.close()
-        
-        # create the buffer
-        self.RecvBuffer = b""
-        '''Buffer of received data; packets are built from this.'''
-    
-    def _TryPacketBuild(self):
-        '''Tries to build a packet from the read buffer.'''
-        # Make sure the buffer isn't empty.
-        if len(self.RecvBuffer) == 0:
-            # Empty.
-            raise Packets.IncompletePacket
-        try:
-            # wrap the buffer in a stream
-            BufferStream = cStringIO.StringIO(self.RecvBuffer)
-        
-            # try to build the packet
-            NewPacket = Packets.BuildPacketFromStream(BufferStream)
-        
-            # If we get here, it worked.  Drop the data from the buffer.
-            PacketEnd = BufferStream.tell()
-            self.RecvBuffer = self.RecvBuffer[PacketEnd:]
-            
-            return NewPacket
-        except:
-            # re-raise the exception
-            raise
-        finally:
-            BufferStream.close()
     
     ##
     ## connection information properties
@@ -119,17 +81,6 @@ class ServerConnection(asyncore.dispatcher_with_send):
     ## reimplemented methods from Networking.BaseConnectionHandler
     ##
     
-    def SendPacket(self, packet):
-        '''
-        Reimplmented from xVLib.Networking.BaseConnectionHandler.
-        
-        All we do here is convert the packet to binary and add it to the
-        outgoing data queue.  Nothing fancy.
-        '''
-        # get the packet data and send it
-        data = packet.GetBinaryForm()
-        self.send(data)
-    
     def PacketReceived(self, packet):
         '''
         Reimplemented from xVLib.Networking.BaseConnectionHandler.
@@ -139,52 +90,18 @@ class ServerConnection(asyncore.dispatcher_with_send):
         '''
         pass    # TODO: Implement
     
-    ##
-    ## low-level callbacks
-    ##
-    def handle_read(self):
-        '''
-        Called when connection data can be read.
+    def OnCorruptPacket(self):
+        # Log an error message.
+        msg = "%s - Corrupt packet received." % self.Address[0]
+        msg += "\n\n%s" % traceback.format_exc()
+        mainlog.error(msg)
         
-        This method reads the data off the wire and appends it to the buffer,
-        then attempts to build a packet from the data.  If it succeeds, it
-        calls the PacketReceived() callback method and removes the data from
-        the buffer.
-        
-        This is a reimplemented callback method from dispatcher_with_send.
-        '''
-        # receive data, append to buffer
-        data = self.recv(8192)
-        self.RecvBuffer += data
-        
-        # try building packets
-        try:
-            # this will loop until there are no more packets in the buffer
-            while 1:
-                NewPacket = self._TryPacketBuild()
-                self.PacketReceived(NewPacket)
-        except Packets.IncompletePacket:
-            # Buffer is as cleared as possible... good.
-            pass
-        except Packets.CorruptPacket:
-            # Corrupt packet? Hmm... better log this.
-            mainlog.error("%s - Corrupt packet received." % self.Address[0])
-            # And, of course, kill the connection! Bad connection! BAD!
-            self.close()
-        except:
-            # Unhandled exception?
-            msg = self.Address[0] + " - Unhandled exception while reading "
-            msg += "data.\n"
-            msg += traceback.format_exc()
-            mainlog.error(msg)
-            # Better close the connection just to be safe.
-            self.close()
-    
-    def handle_close(self):
-        '''
-        Called when the connection is closed by the remote machine.
-        '''
+        # Close the connection.
         self.close()
+    
+    ##
+    ## low-level asyncore callbacks
+    ##
     
     def handle_error(self):
         '''

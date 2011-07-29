@@ -32,7 +32,7 @@ MinorVersion = 1
 '''Server minor version number (max 99).  Constant.'''
 
 LetterVersion = 'a'
-'''Server version letter tag.  Constnat.'''
+'''Server version letter tag.  Constant.'''
 
 UniqueVersionID = 0
 '''Unique version ID.  Guaranteed to increase with every release.  Constant.'''

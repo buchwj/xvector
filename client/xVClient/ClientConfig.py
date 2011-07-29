@@ -20,8 +20,12 @@ Manages the options file for the client.
 """
 
 import ConfigParser
+import traceback
+import logging
 
 from xVClient import ClientPaths
+
+mainlog = logging.getLogger("Client.Main")
 
 # Constants
 MAIN_SECTION = "Options"
@@ -51,7 +55,7 @@ class ClientConfig(object):
         be lost if you do not first call Save().
         """
         self.parser = ConfigParser.SafeConfigParser(self.GetDefaults())
-        self.parser.read(ClientPaths.GetOptionsFile())
+        self.parser.read(ClientPaths.UserConfig)
 
     def Save(self):
         """
@@ -157,14 +161,10 @@ def LoadConfig():
     try:
         _MainConfig = ClientConfig()
         _MainConfig.Load()
-    except Exception as e:
-        # huh, something went wrong
-        if isinstance(e, IOError):
-            # an I/O error
-            raise LoadConfigError((_("I/O error"), e))
-        else:
-            # who knows...
-            raise LoadConfigError((_("Unknown error"), e))
+    except:
+        msg = "Error while loading user settings file.\n"
+        msg += traceback.format_exc()
+        mainlog.error(msg)
 
 
 def GetConfig():

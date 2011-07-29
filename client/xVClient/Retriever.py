@@ -24,7 +24,11 @@ import os.path
 import re
 import sys
 import collections
+import logging
 from xVLib import Directories, async_subprocess
+from . import ClientGlobals
+
+mainlog = logging.getLogger("Client.Main")
 
 PythonScriptRE = re.compile(r'\.py$')
 
@@ -139,6 +143,10 @@ class Retriever(object):
         self.Args = _DetectHTTPFetcher() + (self.Host, str(self.Port))
         '''Arguments which the HTTPFetcher was started with, as a tuple.'''
         self._RestartInstance()
+        
+        # Register for I/O processing.
+        App = ClientGlobals.Application
+        App.BackgroundProcessor.RegisterRetriever(self)
     
     def _RestartInstance(self):
         '''
@@ -212,6 +220,8 @@ class Retriever(object):
         # make sure HTTPFetcher hasn't crashed
         if self.Instance.poll() != None:
             # Okay, this is bad - it crashed.
+            msg = "Retriever instance crashed, restarting."
+            mainlog.warning(msg)
             if self.CurrentRequest:
                 # Fail the request.
                 self.CurrentRequest[2](self.Result_Crashed, None)
@@ -240,18 +250,29 @@ class Retriever(object):
             self.CurrentRequest = self.RequestQueue.popleft()
             request_str = "%s %s\n" % self.CurrentRequest[0:2]
             self.Instance.communicate(request_str)
+    
+    def Shutdown(self):
+        '''
+        Shuts down the HTTPFetcher instance.
+        '''
+        # Kill the process and wait for it to exit.  wait() should return
+        # almost immediately since we're sending SIGTERM.  If we don't wait,
+        # we'll get zombie processes, and that's not very good.
+        self.Instance.terminate()
+        self.Instance.wait()
+        
+        # Deregister.
+        App = ClientGlobals.Application
+        App.BackgroundProcessor.UnregisterRetriever(self)
+    
+    def __del__(self):
+        '''
+        Called right before object deletion.
+        '''
+        # Shut down if we haven't already.
+        try:
+            self.Shutdown()
+        except:
+            # Doesn't matter
+            pass
 
-if __name__ == "__main__":
-    # test
-    cycles = 0
-    
-    def callback(code, crc):
-        print "<< code=%i, crc=%s, cycles=%i >>" % (code,crc,cycles)
-    
-    import os
-    import time
-    retr = Retriever("localhost", 80, os.getcwd())
-    retr.FetchResource("/resources/test4.dat", "test6.dat", callback)
-    while True:
-        retr.ProcessIO()
-        cycles += 1

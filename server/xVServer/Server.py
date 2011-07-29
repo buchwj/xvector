@@ -27,6 +27,7 @@ import logging
 import traceback
 from logging import handlers
 from xVServer import ServerGlobals, Configuration, MainLoop, ServerNetworking
+from xVLib import Version
 
 mainlog = logging.getLogger("Server.Main")
 
@@ -194,8 +195,8 @@ class ServerApplication(object):
     
     def ShowVersionInfo(self):
         '''Shows the version information.'''
-        args = (ServerGlobals.MajorVersion, ServerGlobals.MinorVersion,
-                ServerGlobals.LetterVersion)
+        args = (Version.MajorVersion, Version.MinorVersion,
+                Version.LetterVersion)
         print "xVector Server %i.%02i%s" % args
     
     def ShowLicenseInfo(self):

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MetaserverWidget.ui'
 #
-# Created: Wed Jul 13 22:48:05 2011
+# Created: Wed Jul 27 16:25:48 2011
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,7 +17,7 @@ except AttributeError:
 class Ui_MetaserverWidget(object):
     def setupUi(self, MetaserverWidget):
         MetaserverWidget.setObjectName(_fromUtf8("MetaserverWidget"))
-        MetaserverWidget.resize(300, 374)
+        MetaserverWidget.resize(339, 374)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -26,6 +26,7 @@ class Ui_MetaserverWidget(object):
         self.verticalLayout = QtGui.QVBoxLayout(MetaserverWidget)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.ServerList = QtGui.QListView(MetaserverWidget)
+        self.ServerList.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.ServerList.setObjectName(_fromUtf8("ServerList"))
         self.verticalLayout.addWidget(self.ServerList)
         self.scrollArea = QtGui.QScrollArea(MetaserverWidget)
@@ -38,25 +39,36 @@ class Ui_MetaserverWidget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 286, 114))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 325, 114))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.DescriptionLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
         self.DescriptionLabel.setText(_fromUtf8(""))
         self.DescriptionLabel.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.DescriptionLabel.setWordWrap(True)
         self.DescriptionLabel.setObjectName(_fromUtf8("DescriptionLabel"))
         self.verticalLayout_2.addWidget(self.DescriptionLabel)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.verticalLayout.addWidget(self.scrollArea)
-        self.buttonBox = QtGui.QDialogButtonBox(MetaserverWidget)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
-        self.verticalLayout.addWidget(self.buttonBox)
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+        self.BackButton = QtGui.QPushButton(MetaserverWidget)
+        self.BackButton.setObjectName(_fromUtf8("BackButton"))
+        self.horizontalLayout.addWidget(self.BackButton)
+        self.ConnectButton = QtGui.QPushButton(MetaserverWidget)
+        self.ConnectButton.setEnabled(False)
+        self.ConnectButton.setObjectName(_fromUtf8("ConnectButton"))
+        self.horizontalLayout.addWidget(self.ConnectButton)
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.retranslateUi(MetaserverWidget)
         QtCore.QMetaObject.connectSlotsByName(MetaserverWidget)
 
     def retranslateUi(self, MetaserverWidget):
         MetaserverWidget.setWindowTitle(QtGui.QApplication.translate("MetaserverWidget", "Form", None, QtGui.QApplication.UnicodeUTF8))
+        self.BackButton.setText(QtGui.QApplication.translate("MetaserverWidget", "Back", None, QtGui.QApplication.UnicodeUTF8))
+        self.ConnectButton.setText(QtGui.QApplication.translate("MetaserverWidget", "Connect", None, QtGui.QApplication.UnicodeUTF8))
 

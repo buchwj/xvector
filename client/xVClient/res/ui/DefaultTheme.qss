@@ -2,6 +2,7 @@
  * xVector MMORPG Engine Client                                              *
  * Copyright (c) 2011 James R. Buchwald                                      *
  * Default Theme Stylesheet                                                  *
+ * Licensed under GNU GPL v2                                                 *
  * ------------------------------------------------------------------------- *
  * This is the Qt stylesheet for the client's default theme, used for the    *
  * startup screen and for any servers which do not provide their own as part *
@@ -15,4 +16,86 @@
  * theme will be used instead.                                               *
 \*****************************************************************************/
 
+/*****************************************************************************\
+ * SECTION 1: Basic Widget Styles
+ *
+ * These settings apply to various general widgets if no other style rules
+ * match the widget.
+\*****************************************************************************/
 
+/*
+ * Labels with no backgrounds.
+ */
+QLabel
+{
+    color: rgb(220,220,220);
+}
+
+/*
+ * Basic UI elements that normally have backgrounds.
+ */
+QLineEdit, QListView, QScrollArea
+{
+    background-color: rgba(15,15,15,160);
+    color: rgb(220,220,220);
+}
+
+/*
+ * Buttons.
+ */
+QPushButton
+{
+    border: 2px solid rgb(5,5,5);
+    padding: 6px;
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(10,10,10,200), stop: 1 rgba(20,20,20,200));
+    color: rgb(220,220,220);
+}
+
+QPushButton:hover
+{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(20,20,20,200), stop: 1 rgba(30,30,30,200));
+}
+
+QPushButton:disabled
+{
+    color: rgb(100,100,100);
+}
+
+QPushButton:clicked
+{
+    background-color: qlineargradient(x1: 0, y1:0, x2: 0, y2: 1, stop: 0 rgba(30,30,30,200), stop: 1 rgba(20,20,20,200));
+}
+
+/*****************************************************************************\
+ * SECTION 2: Startup Screen Styles
+ *
+ * These settings are for the startup screen.  If you are modifying this file
+ * to make a theme for your server, these settings will have no effect; they
+ * only apply to parts of the client which appear before a connection is made
+ * to the server.
+\*****************************************************************************/
+ 
+/*
+ * This block describes the style of the startup menu displayed when the
+ * client is first opened.
+ */
+QWidget#TitleWidget
+{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(20,20,20,200), stop: 1 rgba(40,40,40,200));
+}
+
+/*
+ * This block describes the style of the Public Servers menu.
+ */
+QWidget#MetaserverWidget
+{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(20,20,20,200), stop: 1 rgba(40,40,40,200));
+}
+
+/*
+ * This block describes the style of the Private Servers menu.
+ */
+QWidget#PrivateServerWidget
+{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(20,20,20,200), stop: 1 rgba(40,40,40,200));
+}

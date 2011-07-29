@@ -19,12 +19,16 @@
 Handles interactions with the metaserver.
 '''
 
-from xVClient.Retriever import Retriever
+from .Retriever import Retriever
+from .ui.MetaserverWidgetUI import Ui_MetaserverWidget
 import tempfile
 import os
 import logging
 import traceback
 from xml.parsers import expat
+
+from PyQt4 import QtCore, QtGui
+from PyQt4.QtCore import SIGNAL
 
 mainlog = logging.getLogger("Client.Main")
 
@@ -155,6 +159,10 @@ class Metaclient(object):
             # Failed.
             if self.Callback:
                 self.Callback(code)
+            return
+        
+        # Shut down the retriever.
+        self.RetrieverInstance.Shutdown()
         
         # Try parsing the file.
         try:
@@ -216,23 +224,120 @@ class Metaclient(object):
 
 
 ##
-## Testing
+## User interface for the metaserver
 ##
 
-if __name__ == "__main__":
-    # set up log
-    handler = logging.StreamHandler()
-    mainlog.addHandler(handler)
+class MetaserverWidget(QtGui.QWidget):
+    '''
+    Provides a user interface to the metaserver.  Used on the startup screen.
+    '''
     
-    # run test
-    import sys
-    client = Metaclient()
-    def callback(code):
-        print "code = %i" % code
-        print client.Servers
-        sys.exit(code)
+    def __init__(self, parent=None):
+        '''
+        Creates a new metaserver widget.
         
-    client.GetServers(callback)
-    retriever = client.RetrieverInstance
-    while True:
-        retriever.ProcessIO()
+        @type parent: QtGui.QWidget
+        @param parent: Parent widget 
+        '''
+        # Inherit base class behavior.
+        super(MetaserverWidget, self).__init__(parent)
+        
+        # Set up our UI.
+        self.ui = Ui_MetaserverWidget()
+        self.ui.setupUi(self)
+        
+        # Declare attributes.
+        self.ListModel = None
+        '''List model for the server list widget.'''
+        self.Metaclient = None
+        '''Metaserver client object.'''
+        
+        # Connect widgets.
+        self.connect(self.ui.ServerList, SIGNAL("clicked(QModelIndex)"),
+                     self.OnSelection)
+        self.connect(self.ui.ConnectButton, SIGNAL("clicked()"),
+                     self.OnConnect)
+        self.connect(self.ui.BackButton, SIGNAL("clicked()"),
+                     self.OnBack)
+        
+        # Fetch the metaserver information.
+        try:
+            self.Metaclient = Metaclient()
+            self.Metaclient.GetServers(self._MetaserverCallback)
+        except:
+            msg = "Error while starting remote resource retriever.\n"
+            msg += traceback.format_exc()
+            mainlog.error(msg)
+        
+    def _MetaserverCallback(self, code):
+        '''
+        Callback passed to the Metaclient object.
+        
+        @type code: integer
+        @param code: Result code
+        '''
+        # Did it work?
+        if code != Retriever.Result_OK:
+            # Something went wrong.
+            msg = "Failed to retrieve public server list.\n"
+            msg += "Error code %i." % code
+            mainlog.error(msg)
+            return
+        
+        # Update the server list.
+        Servers = QtCore.QStringList()
+        for entry in self.Metaclient.Servers:
+            Servers.append(entry.Name)
+        self.ListModel = QtGui.QStringListModel(Servers)
+        self.ui.ServerList.setModel(self.ListModel)
+    
+    def OnConnect(self):
+        '''
+        Called when the user clicks Connect.
+        '''
+        # What are we connecting to?
+        try:
+            index = self.ui.ServerList.selectedIndexes()[0]
+            server = self.Metaclient.Servers[index.row()]
+        except:
+            msg = "Invalid server selection."
+            mainlog.error(msg)
+            return
+        
+        # Connect
+        address = (server.Host, server.Port)
+        self.parent().ConnectToServer(address)
+    
+    def OnBack(self):
+        '''
+        Called when the user clicks Back.
+        '''
+        self.parent().BackToMain()
+    
+    def OnSelection(self, index):
+        '''
+        Called when the user selects a server from the list.
+        
+        @type index: QtCore.QModelIndex
+        @param index: Selection index
+        '''
+        # What was selected?
+        selected = self.Metaclient.Servers[index.row()]
+        self.ui.DescriptionLabel.setText(selected.Description)
+        
+        # Enable the Connect button.
+        self.ui.ConnectButton.setEnabled(True)
+    
+    def paintEvent(self, event):
+        '''
+        Called from Qt when the widget is repainted.
+        
+        @type event: QtGui.QPaintEvent
+        @param event: Paint event
+        '''
+        # Enable stylesheets on this widget.
+        opt = QtGui.QStyleOption()
+        opt.init(self)
+        painter = QtGui.QPainter(self)
+        self.style().drawPrimitive(QtGui.QStyle.PE_Widget, opt,
+                                   painter, self)

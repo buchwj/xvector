@@ -19,6 +19,7 @@
 Asynchronous processing code that runs in the background of the client.
 '''
 
+import asyncore
 from PyQt4 import QtCore
 
 
@@ -40,10 +41,44 @@ class BackgroundProcessor(QtCore.QObject):
         # Tell the Qt event loop that we want to process in the background.
         self.startTimer(0)
     
+    def RegisterRetriever(self, retriever):
+        '''
+        Registers a retriever for I/O processing.
+        
+        @type retriever: Retriever.Retriever
+        @param retriever: Retriever object to register.
+        '''
+        # Do we already have this retriever?
+        if retriever in self.Retrievers:
+            # We have it, ignore
+            return 
+        
+        # Register the retriever.
+        self.Retrievers.add(retriever)
+    
+    def UnregisterRetriever(self, retriever):
+        '''
+        Unregisters a retriever.
+        
+        @type retriever: Retriever.Retriever
+        @param retriever: Retriever object to unregister.
+        '''
+        # Do we have this retriever?
+        if retriever in self.Retrievers:
+            # Remove it.
+            self.Retrievers.remove(retriever)
+    
     def timerEvent(self, event):
         '''
         Called by the Qt event loop whenever we can do background processing.
         '''
+        # Handle any pending network events.
+        asyncore.loop(timeout=0, count=1)
+        
         # Handle processing on all Retriever instances.
-        for instance in self.Retrievers:
-            instance.ProcessIO()
+        try:
+            for retriever in self.Retrievers:
+                retriever.ProcessIO()
+        except:
+            # Sometimes we get errors from the iteration, that's OK
+            pass

@@ -35,10 +35,11 @@ BaseMasterPath = os.path.join(os.path.split(__file__)[0], "res")
 ## Various default resource files
 ##
 
-DefaultStyleSheet = os.path.join(BaseMasterPath, "res", "ui", 
-                                 "DefaultTheme.qss")
+DefaultStyleSheet = os.path.join(BaseMasterPath, "ui", "DefaultTheme.qss")
 '''Path to the default stylesheet for the application.'''
 
+UserConfig = os.path.join(BaseUserPath, "Settings.cfg")
+'''Path to the user's settings file.'''
 
 ##
 ## Resource directory prefixes

@@ -39,6 +39,13 @@ class IncompletePacket(Exception): pass
 class CorruptPacket(Exception): pass
 '''Raised when a packet cannot be decoded because it is corrupt.'''
 
+##
+## Constants
+##
+
+MaxCompressedSize = 65536
+'''Maximum size of a compressed data block, in bytes.'''
+# We don't want individual packets getting anywhere close to 64KB.
 
 #
 # Packet Types
@@ -134,9 +141,10 @@ class Packet(object):
         if body:
             # there's a body that needs to be compressed
             compressed = self.CompressIfNeeded(body)
-            if compressed:
+            if compressed != None:
                 bodywriter = cStringIO.StringIO()
-                BinaryStructs.SerializeBinary(bodywriter, compressed)
+                BinaryStructs.SerializeBinary(bodywriter, compressed,
+                                              maxlen=MaxCompressedSize)
                 body = bodywriter.getvalue()
                 bodywriter.close()
                 flags |= HeaderFlag_zlib
@@ -171,7 +179,7 @@ class Packet(object):
         try:
             ph_type = BinaryStructs.DeserializeUint16(stream)
             ph_flags = BinaryStructs.DeserializeUint16(stream)
-        except BinaryStructs.EndOfFile: 
+        except BinaryStructs.EndOfFile:
             # Packet seems incomplete
             raise IncompletePacket
         
@@ -182,7 +190,7 @@ class Packet(object):
         
         # Now try reading the body.
         compressed = bool(ph_flags & HeaderFlag_zlib)
-        self.GetBodyFromBinary(stream, compressed)
+        self._GetBodyFromBinary(stream, compressed)
     
     def _GetBodyFromBinary(self, stream, compressed=False):
         '''
@@ -218,10 +226,11 @@ class Packet(object):
         '''
         # make the initial compression
         compressed = zlib.compress(data)
-        if len(compressed) < len(data):
+        if (len(compressed) < len(data)
+            and len(compressed) <= MaxCompressedSize):
             # compression is good
             return compressed
-        # compression isn't good
+        # compression isn't good (or is too large for a compression block)
         return None
     
     def Decompress(self, stream):
@@ -236,7 +245,8 @@ class Packet(object):
         
         # Try to deserialize the data from the stream.
         try:
-            data = BinaryStructs.DeserializeBinary(stream)
+            data = BinaryStructs.DeserializeBinary(stream,
+                                                   maxlen=MaxCompressedSize)
         except BinaryStructs.EndOfFile:
             raise IncompletePacket
         
@@ -308,6 +318,7 @@ class NegotiateConnectionPacket(Packet):
         
         # Declare our type.
         self.PacketType = NegotiateConnection
+        self._HasBody = True
     
         # No body attributes for this one, they're all engine constants.
     
@@ -549,12 +560,13 @@ def BuildPacketFromStream(stream):
     @return: A Packet object, or an object of a Packet subclass.
     '''
     # try peeking ahead at the packet type
+    startpos = stream.tell()
     try:
-        startpos = stream.tell()
         type = BinaryStructs.DeserializeUint16(stream)
         stream.seek(startpos)
     except:
-        # not enough data
+        # not enough data, make sure we rewind
+        stream.seek(startpos)
         raise IncompletePacket
     
     # check the type

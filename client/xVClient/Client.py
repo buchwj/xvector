@@ -45,6 +45,8 @@ class ClientApplication(object):
         '''Main window of the client.'''
         self.BackgroundProcessor = None
         '''Background task processor.'''
+        self.Connection = None
+        '''Handler for the connection to the server.'''
     
     def LoadDefaultTheme(self):
         '''
@@ -60,7 +62,8 @@ class ClientApplication(object):
             themefile.close()
             self.QtApp.setStyleSheet(stylesheet)
         except IOError:
-            msg = "Could not read default stylesheet, using system theme."
+            msg = "Could not read default stylesheet, using system theme.\n"
+            msg += traceback.format_exc()
             mainlog.warning(msg)
             
 
@@ -95,9 +98,6 @@ class ClientApplication(object):
 
         # set up the application basics
         self.MainWindow = GameWindow.ClientWindow()
-        
-        # test the error reporting
-        mainlog.error("Test error message.")
 
         # run the application
         self.MainWindow.Display()
