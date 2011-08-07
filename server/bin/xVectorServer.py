@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 
 # xVector Engine Server
 # Copyright (c) 2011 James Buchwald
@@ -17,16 +17,10 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-__all__ = ['Database', 'MainLoop', 'ServerConfig', 'ServerCore',
-           'ServerGlobals', 'ServerNetworking', 'IPBans']
+'''
+Server executable.
+'''
 
-##
-## SQLAlchemy setup
-##
+from xVServer import ServerCore
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from . import Database
-
-Database.Session = sessionmaker()
-Database.Base = declarative_base()
+ServerCore.Main()

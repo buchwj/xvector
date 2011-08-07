@@ -235,7 +235,6 @@ class Retriever(object):
             output, errors = self.Instance.communicate()
             if errors:
                 # something went wrong with the request
-                print errors
                 code = int(errors.strip())
                 self.CurrentRequest[2](code, None)
                 self.CurrentRequest = None

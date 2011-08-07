@@ -13,69 +13,217 @@
   -->
 
 <ServerConfiguration>
-
+    <!--
+      Basic Settings
+      
+      This section contains basic server configuration settings.
+          -->
+    <General>
+        <!--
+          Server name as presented to the user.  Set this to whatever you want.
+          Maximum length is 64 characters.
+              -->
+        <ServerName>Change This</ServerName>
+        
+        <!--
+          When the client is sitting on the login screen, it can optionally
+          display server news from a remote URL.  The URL can be specified
+          here, or left blank to not use this feature.
+              -->
+        <ServerNewsURL></ServerNewsURL>
+        
+        <!--
+          If you want to disable registration from within the client (i.e. if
+          you are using a custom browser-based registration form), set this
+          option to True.
+          -->
+        <DisableRegistration>False</DisableRegistration>
+    </General>
+    
+    <!--
+      Database Settings
+      
+      This section contains the configuration for the database file or server.
+      -->
+    <Database>
+        <!--
+          Type
+          
+          This option allows you to change the type of database used.  You can
+          use any database type supported by the SQLAlchemy library.  As a
+          general guideline, these databases are officially supported:
+          
+          sqlite     - This is a file-based database engine that doesn't 
+                       require you to run your own database server.  It's good
+                       for testing, but you probably shouldn't run a production
+                       server with it.
+          mysql      - This is the MySQL database server, which you can
+                       download and install from http://www.mysql.com.
+          postgresql - This is the PostgreSQL database server, which you can
+                       download and install from http://www.postgresql.org.
+         
+          The default is sqlite.
+          -->
+        <Type>sqlite</Type>
+        <!--
+          Host
+          
+          This option specifies the host of the database server.  If you're
+          using the sqlite database engine, leave this blank.  You must set
+          this option unless you are using the sqlite database; it has no
+          default.
+          -->
+        <Host></Host>
+        
+        <!--
+          Port
+          
+          This option specifies the port of the database server.  Not used with
+          sqlite.  For the other engines, the default value varies with the
+          type of database used.
+          -->
+        <Port>!!default!!</Port>
+        
+        <!--
+          Name
+          
+          Name of the database to be used.  For sqlite, this is the path to the
+          database file.  For other engines, this is the name of the database
+          on the server.  The default value is "xvector.sqlite", which refers
+          to an sqlite database file in the server's working directory.
+          -->
+        <Name>xvector.sqlite</Name>
+        
+        <!--
+          Username
+          
+          For database engines other than sqlite, the username to connect with.
+          Not used with sqlite.  Default is blank.
+          -->
+        <Username></Username>
+        
+        <!--
+          Password
+          
+          For database engines other than sqlite, the password to connect with.
+          Not used with sqlite.  Default is blank.
+          -->
+        <Password></Password>
+    </Database>
+    
+    <!--
+      Resource Settings
+      
+      This section controls how resources used by the client are made available
+      to it.  This includes features such as the auto-updater and in-game map
+      file updates.
+          -->
+    <Resources>
+        <!--
+          AutoUpdater
+          
+          The xVector Engine client ships with a built-in automatic updater
+          for retrieving updates to game files from a Web server.  This feature
+          is disabled by default.
+              -->
+        <AutoUpdater>
+            <!-- Whether or not automatic updates are enabled. -->
+            <Enabled>False</Enabled>
+            
+            <!-- URL of the web directory containing the updates. -->
+            <URL>http://www.example.com/updates/</URL>
+        </AutoUpdater>
+        
+        <!--
+          By default the xVector Engine client will retrieve map files directly
+          from the server.  If you would rather make them available through
+          an HTTP server, however, you can change the following settings to do
+          so.  (You will still need to set up the HTTP server yourself if you
+          do this.)
+              -->
+        <ExternalMaps>
+            <!-- Whether or not maps are kept on another HTTP server. -->
+            <Enabled>False</Enabled>
+            
+            <!-- URL of the web directory containing the maps. -->
+            <URL>http://www.example.com/maps/</URL>
+        </ExternalMaps>
+    </Resources>
+    
     <!--
       Network Settings
       
-      This section contains basic settings for how the server uses the network. 
-      -->
+      This section contains basic settings for how the server uses the network.
+          -->
     <Network>
         <!--
-          The server will bind to this address.
-          In most cases you will want to leave Interface as "0.0.0.0"; this
-          will allow the server to listen on all network interfaces.
-          You will also probably want to leave Port as "24020"; this is the
-          default port.
-          
-          Default values:
-            Interface="0.0.0.0"
-            Port="24020"
-          
-          Accessed from the code as:
-            Network.Address.Interface
-            Network.Address.Port
-          -->
-        <Address Interface="0.0.0.0" Port="24020" />
+          The server will bind to these addresses.
+          Usually you don't need to change this.
+              -->
+        <Address>
+            <!--
+              IPv4 configuration.
+              -->
+            <IPv4>
+                <!-- Use IPv4? (Default: True) -->
+                <Enabled>True</Enabled>
+                
+                <!-- Network interface to bind to (0.0.0.0 for all) -->
+                <Interface>0.0.0.0</Interface>
+                
+                <!-- Port to use (default is 24020) -->
+                <Port>24020</Port>
+            </IPv4>
+            
+            <!--
+              IPv6 configuration.
+              -->
+            <IPv6>
+                <!-- Use IPv6? (Default: False) -->
+                <Enabled>False</Enabled>
+                
+                <!-- Network interface to bind to (:: for all) -->
+                <Interface>::</Interface>
+                
+                <!-- Port to use (default is 24020) -->
+                <Port>24020</Port>
+            </IPv6>
+        </Address>
         
         <!--
-          This is the maximum number of connections the server will accept.
-          Set this to whatever you feel like (at least 1, no more than about
-          two billion).  Of course, if you actually manage to get a million
-          connections, a single server probably can't handle it.  You can also
-          limit the number of connections that can be made from a single IP
-          address.
-          
-          Default values:
-            Max="50"
-            PerIP="2"
-          
-          Accessed from the code as:
-            Network.Connections.Max
-            Network.Connections.PerIP
-          -->
-        <Connections Max="50" PerIP="2" />
+          These next settings control how many connections can be made to the
+          server, both individually per IP and overall.  Setting these options
+          carefully can help to prevent your server from becoming overloaded.
+              -->
+        <Connections>
+            <!-- Maximum number of total connections (default is 50) -->
+            <Max>50</Max>
+            
+            <!-- Maximum number of connections per IP (default is 2) -->
+            <PerIP>2</PerIP>
+        </Connections>
         
         <!--
-          This is an advanced setting that allows some fine-tuning of the
-          underlying network engine.  Generally you won't want to mess with
-          this, but high-load servers may find these options useful.
-          
-          Currently the only fine-tuning option is UsePoll, which switches the
-          method used to scan the network for data.  By default this is False,
-          as Poll is not supported on all platforms and doesn't give a huge
-          performance boost for small servers (in fact, it can have a slight
-          negative effect on some small servers).  If, however, you run a
-          heavily-loaded server, you may want to consider setting this to True
-          to get a performance boost.  Please note that this option is not
-          supported on Windows.
-          
-          Default values:
-            UsePoll="False"
-          
-          Accessed from the code as:
-            Network.Engine.UsePoll
-          -->
-        <Engine UsePoll="False" />
+          These next settings are advanced options for fine-tuning the behavior
+          of the underlying network engine.  If you don't understand what these
+          options do, you probably shouldn't touch them.
+              -->
+        <Engine>
+            <!--
+              The network engine can use one of several methods to scan the
+              network for incoming data.  By default, the engine uses the
+              operating system's select() function to check; unfortunately,
+              due to how the function works, it quickly becomes inefficient
+              as more clients connect.  If you are running the server on a
+              Linux server, you have another option: polling objects.
+              Polling objects are slower for small numbers of connections,
+              but you can drastically cut overhead on servers with many
+              connections using them.
+              
+              Not supported on Windows.  Default is False.
+                  -->
+            <UsePoll>False</UsePoll>
+        </Engine>
     </Network>
     
     <!--
@@ -83,41 +231,18 @@
       
       This section allows you to customize how and where the server stores its
       log files.
-      -->
+          -->
     <Logging>
-        <!--
-          This is the directory to which all log files are stored.
-          It can be either an absolute or relative path.
-          The user account under which the server is running must be able to
-          write to this directory.
-          
-          Default value:
-            Path="!!default!!"
-              which is the same as:
-                Windows: "logs"
-                Linux: "/var/log/xvector"
-          
-          Accessed from the code as:
-            Logging.Directory.Path 
-          -->
-        <Directory Path="!!default!!" />
+        <!-- Directory in which log files are stored. -->
+        <Directory>!!default!!</Directory>
         
-        <!--
-          This controls the behavior of the log file rotator.
-          The rotator ensures that logs do not overflow and flood the system;
-          it enforces a maximum log size and keeps a given number of old logs.
-          Both the maximum size and number of old logs are set here.  The size
-          is given in bytes (1024 bytes = 1 KB, 1024 KB = 1 MB).
-          
-          Default value:
-            MaxSize="4194304"   (4 MB)
-            LogCount="10"
-          
-          Accessed from the code as:
-            Logging.Rotator.MaxSize
-            Logging.Rotator.LogCount
-          -->
-        <Rotator MaxSize="4194304" LogCount="10" />
-          
+        <!-- Rotating log file settings. -->
+        <Rotator>
+            <!-- Maximum size of a single log file. -->
+            <MaxSize>4194304</MaxSize>
+            
+            <!-- Number of older log files to keep. -->
+            <LogCount>10</LogCount>
+        </Rotator>
     </Logging>
 </ServerConfiguration>

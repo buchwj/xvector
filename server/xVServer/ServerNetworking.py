@@ -26,11 +26,23 @@ import traceback
 import asyncore
 import socket
 
-from xVLib import Networking, Packets
-from xVServer import ServerGlobals
+from xVLib import Networking, Packets, Version
+from . import ServerGlobals, IPBans
 
 # stuff we use later
 mainlog = logging.getLogger("Server.Main")
+
+
+##
+## State constants
+##
+State_Negotiate = 0
+State_WaitForLogin = 1
+State_Login = 2
+State_CharacterSelect = 3
+State_CharacterCreate = 4
+State_Game = 5
+
 
 class ConnectionClosed(Exception): pass
 '''Raised when a connection is closed.'''
@@ -40,6 +52,7 @@ class ServerConnection(Networking.BaseConnectionHandler):
     '''
     Server-side connection handler for a single connection.
     '''
+    
     def __init__(self, sock=None):
         '''
         Creates a new server-side connection handler.
@@ -47,12 +60,14 @@ class ServerConnection(Networking.BaseConnectionHandler):
         @type sock: socket
         @param sock: Connected socket to wrap
         '''
-        # inherit base class behavior
+        # Inherit base class behavior
         Networking.BaseConnectionHandler.__init__(self, sock)
         
-        # declare our network attributes
-        self.Address = sock.getpeername()
-        '''Network address of the remote machine.'''
+        # Set the initial state.
+        self.State = State_Negotiate
+        '''Current state.'''
+        self.Router = StateRouters[self.State]()
+        '''Current packet router.'''
         
         # Register the connection.
         msg = "New connection from %s." % self.Address[0]
@@ -62,6 +77,12 @@ class ServerConnection(Networking.BaseConnectionHandler):
             App.Connections.AddConnection(self)
         except ConnectionLimitExceeded:
             self.close()
+    
+    def SetState(self, newstate):
+        self.State = newstate
+        
+        # Adjust the packet router.
+        self.Router = StateRouters[newstate]()
     
     ##
     ## connection information properties
@@ -88,13 +109,22 @@ class ServerConnection(Networking.BaseConnectionHandler):
         Here we pass the packet to the appropriate handler.  Again, nothing
         special.  This is essentially just a routing method.
         '''
-        pass    # TODO: Implement
+        # Hand it off to the router.
+        self.Router.HandlePacket(packet)
     
     def OnCorruptPacket(self):
         # Log an error message.
         msg = "%s - Corrupt packet received." % self.Address[0]
         msg += "\n\n%s" % traceback.format_exc()
         mainlog.error(msg)
+        
+        # Close the connection.
+        self.close()
+    
+    def OnTimeout(self):
+        # Log the event.
+        msg = "%s - Connection timed out." % self.Address[0]
+        mainlog.info(msg)
         
         # Close the connection.
         self.close()
@@ -132,6 +162,10 @@ class ServerConnection(Networking.BaseConnectionHandler):
         # Log the close event.
         msg = "%s - Connection closed." % self.Address[0]
         mainlog.info(msg)
+        
+        # Deregister the connection.
+        App = ServerGlobals.Application
+        App.Connections.RemoveConnection(self)
         
         # Inherit base class behavior.
         asyncore.dispatcher_with_send.close(self)
@@ -188,7 +222,7 @@ class ConnectionManager(object):
         
         # now register the connection
         App = ServerGlobals.Application
-        maxtotal = App.Config['Network.Connections.Max']
+        maxtotal = App.Config['Network/Connections/Max']
         addr = conn.Address
         if len(self.ConnectionSet) > maxtotal:
             # Total connection limit exceeded
@@ -198,7 +232,7 @@ class ConnectionManager(object):
         self.ConnectionSet.add(conn)
         
         # check the address
-        maxip = App.Config['Network.Connections.PerIP']
+        maxip = App.Config['Network/Connections/PerIP']
         if addr[0] in self.AddressConnectCount:
             if self.AddressConnectCount[addr[0]] > maxip:
                 # Per-IP connection limit exceeded.
@@ -268,7 +302,7 @@ class ConnectionManager(object):
     
     def RemoveConnection(self, conn):
         '''
-        Removes a connection.
+        Queues a connection for removal.
         
         @type conn: ServerConnection
         @param conn: Connection to unregister
@@ -318,6 +352,15 @@ class ConnectionManager(object):
         except:
             msg = "%s - Failed to decrement per-IP connection count." % addr
             mainlog.error(msg)
+    
+    def ScanForTimeouts(self):
+        '''
+        Finds timed-out connections and closes them.
+        '''
+        # Scan the connections.
+        copyset = self.ConnectionSet.copy()
+        for conn in copyset:
+            conn.CheckTimeout()
 
 
 class NetworkStartupError(Exception): pass
@@ -327,17 +370,48 @@ class NetworkStartupError(Exception): pass
 class NetworkServer(asyncore.dispatcher):
     '''
     Listens for new incoming connections and assigns them to handlers.
+    
+    Don't directly create instances of this class; instead, use one of its
+    subclasses, either IPv4Server or IPv6Server.
     '''
     
     def __init__(self):
         '''Creates the network server and starts listening for connections.'''
-        # inherit base class behavior
+        # Inherit base class behavior
         asyncore.dispatcher.__init__(self)
+    
+    def handle_accept(self):
+        '''Called when a client is trying to connect.'''
+        # accept the connection
+        try:
+            pair = self.accept()
+        except socket.error as err:
+            # something went wrong
+            msg = "Failed to accept incoming connection: %s" % err.args[1]
+            mainlog.error(msg)
+            return
+        if not pair:
+            # apparently they're not trying to connect anymore...
+            return
+        
+        # wrap the connection
+        sock = pair[0]
+        conn = ServerConnection(sock)
+
+
+class IPv4Server(NetworkServer):
+    '''
+    Network server class for IPv4 connections.
+    '''
+    
+    def __init__(self):
+        # inherit base class behavior
+        NetworkServer.__init__(self)
         
         # create the listening socket
         App = ServerGlobals.Application
-        iface = App.Config['Network.Address.Interface']
-        port = App.Config['Network.Address.Port']
+        iface = App.Config['Network/Address/IPv4/Interface']
+        port = App.Config['Network/Address/IPv4/Port']
         addr = (iface, port)
         try:
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -360,24 +434,48 @@ class NetworkServer(asyncore.dispatcher):
             msg = "Could not listen on listening socket: %s" % err.args[1]
             mainlog.critical(msg)
             raise NetworkStartupError
+
+
+class IPv6Server(NetworkServer):
+    '''
+    Network server class for IPv6 connections.
+    '''
     
-    def handle_accept(self):
-        '''Called when a client is trying to connect.'''
-        # accept the connection
-        try:
-            pair = self.accept()
-        except socket.error as err:
-            # something went wrong
-            msg = "Failed to accept incoming connection: %s" % err.args[1]
-            mainlog.error(msg)
-            return
-        if not pair:
-            # apparently they're not trying to connect anymore...
-            return
+    def __init__(self):
+        # inherit base class behavior
+        NetworkServer.__init__(self)
         
-        # wrap the connection
-        sock, addr = pair
-        conn = ServerConnection(sock)
+        # create the listening socket
+        App = ServerGlobals.Application
+        iface = App.Config['Network/Address/IPv6/Interface']
+        port = App.Config['Network/Address/IPv6/Port']
+        addr = (iface, port)
+        try:
+            # Create the IPv6 socket
+            self.create_socket(socket.AF_INET6, socket.SOCK_STREAM)
+            self.set_reuse_addr()
+            
+            # Limit to IPv6 only (this is an easy way to separate IPv4/IPv6 on
+            # multiple platforms)
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        except socket.error as err:
+            msg = "Could not create listening socket: %s" % err.args[1]
+            mainlog.critical(msg)
+            raise NetworkStartupError
+        
+        # bind to the network address and start listening
+        try:
+            self.bind(addr)
+        except socket.error as err:
+            msg = "Could not bind listening socket: %s" % err.args[1]
+            mainlog.critical(msg)
+            raise NetworkStartupError
+        try:
+            self.listen(5)
+        except socket.error as err:
+            msg = "Could not listen on listening socket: %s" % err.args[1]
+            mainlog.critical(msg)
+            raise NetworkStartupError
 
 
 def PollNetwork():
@@ -386,9 +484,179 @@ def PollNetwork():
     
     This should be called once per cycle of the main loop.
     '''
-    # figure out what we're doing
+    # Figure out what we're doing
     App = ServerGlobals.Application
-    usepoll = App.Config['Network.Engine.UsePoll']
+    usepoll = App.Config['Network/Engine/UsePoll']
     
-    # poll the network
+    # Poll the network
     asyncore.loop(timeout=0, count=1, use_poll=usepoll)
+    
+    # Check for timed-out connections
+    App.Connections.ScanForTimeouts()
+
+##
+## Basic packet handlers
+##
+
+class PacketRejector(Packets.PacketHandler):
+    '''Rejects any packets passed to this handler.'''
+    
+    def HandlePacket(self, packet):
+        # log the event
+        args = (packet.Connection.Address, packet.PacketType)
+        msg = "%s - Unhandled packet type %i received." % args
+        mainlog.warning(msg)
+        
+        # close the connection
+        packet.Connection.close()
+
+
+class KeepAliveHandler(Packets.PacketHandler):
+    '''Handles server-side KeepAlive packet events.'''
+    
+    def HandlePacket(self, packet):
+        # make sure this is a keep-alive packet
+        if packet.PacketType != Packets.KeepAlive:
+            msg = "Packet with type %i passed to KeepAliveHandler."
+            msg %= packet.PacketType
+            mainlog.error(msg)
+            raise TypeError(msg)
+        
+        # reply with a keep-alive packet of our own
+        reply = Packets.KeepAlivePacket(packet.Connection)
+        packet.Connection.SendPacket(reply)
+
+
+class ConnectionNegotiationHandler(Packets.PacketHandler):
+    '''
+    Handles the connection negotiation for a single connection.
+    '''
+    
+    def HandlePacket(self, packet):
+        # Make sure this is a NegotiateConnection packet
+        if packet.PacketType != Packets.NegotiateConnection:
+            msg = "Packet with type %i passed to ConnectionNegotiationHandler."
+            msg %= packet.PacketType
+            mainlog.error(msg)
+            raise TypeError(msg)
+        
+        # Perform a version check
+        if packet.Signature != Packets.ProtocolSignature:
+            # Protocol signature mismatch, error 3
+            args = (packet.Connection.Address,
+                    Packets.ConnectionRejectedPacket.Error_Signature)
+            msg = "%s - Connection rejected (error %i, signature mismatch)."
+            msg %= args
+            mainlog.info(msg)
+            
+            reply = Packets.ConnectionRejectedPacket(packet.Connection)
+            reply.RejectionCode = reply.Error_Signature
+            packet.Connection.SendPacket(reply)
+            packet.Connection.close()
+            return
+        elif packet.Revision != Packets.ProtocolRevision:
+            # Protocol revision mismatch, error 2
+            args = (packet.Connection.Address,
+                    Packets.ConnectionRejectedPacket.Error_Revision)
+            msg = "%s - Connection rejected (error %i, revision mismatch)."
+            msg %= args
+            mainlog.info(msg)
+            
+            reply = Packets.ConnectionRejectedPacket(packet.Connection)
+            reply.RejectionCode = reply.Error_Revision
+            packet.Connection.SendPacket(reply)
+            packet.Connection.close()
+            return
+        elif (packet.MajorVersion != Version.MajorVersion or
+              packet.MinorVersion != Version.MinorVersion):
+            # Version mismatch, error 1
+            args = (packet.Connection.Address,
+                    Packets.ConnectionRejectedPacket.Error_Outdated)
+            msg = "%s - Connection rejected (error %i, version mismatch)."
+            msg %= args
+            mainlog.info(msg)
+            
+            reply = Packets.ConnectionRejectedPacket(packet.Connection)
+            reply.RejectionCode = reply.Error_Outdated
+            packet.Connection.SendPacket(reply)
+            packet.Connection.close()
+            return
+        
+        # Accept the connection
+        App = ServerGlobals.Application
+        reply = Packets.ConnectionAcceptedPacket(packet.Connection)
+        reply.ServerName = App.Config['General/ServerName']
+        reply.ServerNewsURL = App.Config['General/ServerNewsURL']
+        # TODO: Add "no-register" flag support
+        reply.SendPacket()
+        packet.Connection.SetState(State_WaitForLogin)
+
+
+##
+## Packet routers
+##
+
+class BaseServerPacketRouter(Packets.PacketRouter):
+    '''
+    Base server packet router.  This automatically rejects all packets.
+    
+    Subclass this to create state-specific packet routers.
+    '''
+    
+    def __init__(self):
+        # Inherit from base class.
+        super(BaseServerPacketRouter, self).__init__()
+        
+        # Set default packet handler.
+        self.DefaultHandler = PacketRejector()
+        
+        # Create our keep-alive handler.
+        self.Handlers[Packets.KeepAlive] = KeepAliveHandler()
+
+
+class ConnectionNegotiationRouter(BaseServerPacketRouter):
+    '''
+    Single-connection packet router for the connection negotiation state.
+    
+    A separate object of this class should be created for each connection, as
+    these objects track internal state.  (Actually, they DON'T in this case
+    since the server only has a single task during the negotiation state, but
+    it's good practice anyway.)
+    '''
+    
+    def __init__(self):
+        # Inherit from base class.
+        super(ConnectionNegotiationRouter, self).__init__()
+        
+        # Set up negotiation handlers.
+        negotiate = ConnectionNegotiationHandler()
+        self.Handlers[Packets.NegotiateConnection] = negotiate
+        
+        # Strike the keep-alive handler (not allowed before negotiation).
+        del self.Handlers[Packets.KeepAlive]
+
+
+class WaitForLoginRouter(BaseServerPacketRouter):
+    '''
+    Single-connection packet router for the wait-for-login state.
+    '''
+    
+    def __init__(self):
+        # Inherit from base class.
+        super(WaitForLoginRouter, self).__init__()
+        
+        # Set up login handlers.
+        # TODO: Implement
+
+
+StateRouters = {
+                State_Negotiate: ConnectionNegotiationRouter,
+                State_WaitForLogin: WaitForLoginRouter,
+                State_Login: None,                          # TODO: Implement
+                State_CharacterSelect: None,                # TODO: Implement
+                State_CharacterCreate: None,                # TODO: Implement
+                State_Game: None,                           # TODO: Implement
+               }
+'''
+Maps connection states to their packet router classes.
+'''

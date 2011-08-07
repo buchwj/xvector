@@ -19,7 +19,7 @@
 Asynchronous processing code that runs in the background of the client.
 '''
 
-import asyncore
+from . import ClientNetworking
 from PyQt4 import QtCore
 
 
@@ -73,7 +73,7 @@ class BackgroundProcessor(QtCore.QObject):
         Called by the Qt event loop whenever we can do background processing.
         '''
         # Handle any pending network events.
-        asyncore.loop(timeout=0, count=1)
+        ClientNetworking.PollNetwork()
         
         # Handle processing on all Retriever instances.
         try:

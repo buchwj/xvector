@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # xVector Engine Server
 # Copyright (c) 2011 James Buchwald
 
@@ -26,8 +24,11 @@ import os
 import logging
 import traceback
 from logging import handlers
-from xVServer import ServerGlobals, Configuration, MainLoop, ServerNetworking
+from xml.etree.cElementTree import ParseError
+from xVServer import ServerGlobals, MainLoop, ServerNetworking, ServerConfig
+from xVServer import Database
 from xVLib import Version
+from xVLib.ConfigurationFile import ConfigurationFile
 
 mainlog = logging.getLogger("Server.Main")
 
@@ -42,9 +43,9 @@ class ServerApplication(object):
     '''
     def __init__(self):
         '''Initializes a new server application.'''
-        #
-        # CLI configuration attributes
-        #
+        ##
+        ## CLI configuration attributes
+        ##
         self.ConfigFilePath = ServerGlobals.DefaultConfigPath
         '''Path to the main configuration file.'''
         self.DaemonMode = False
@@ -55,6 +56,12 @@ class ServerApplication(object):
         '''If running in daemon mode, the pidfile to use.'''
         self.DaemonPath = None
         '''If running in daemon mode, the path to run under.'''
+        self.CreateTables = False
+        '''If set to True, will try to create DB tables and then exit.'''
+        
+        ##
+        ## Runtime attributes
+        ##
         self.Config = None
         '''Main configuration values, stored as a dict.'''
         self.ChatLogger = None
@@ -62,20 +69,18 @@ class ServerApplication(object):
         self.EarlyHandler = None
         '''Early log handler.'''
         
-        #
-        # High-level network objects
-        #
+        ##
+        ## High-level network objects
+        ##
         self.Connections = None
         '''Main connection manager.'''
-        self.Server = None
-        '''Network listening server.'''
+        self.Servers = []
+        '''Iterable list of network server objects.'''
         
         # set up early logging support
         self.EarlyHandler = logging.StreamHandler()
         formatter = logging.Formatter("%(levelname)s - %(message)s")
         self.EarlyHandler.setFormatter(formatter)
-        filter = logging.Filter("Server.Main")
-        self.EarlyHandler.addFilter(filter)
         self.EarlyHandler.setLevel(logging.INFO)
         mainlog.addHandler(self.EarlyHandler)
     
@@ -154,6 +159,8 @@ class ServerApplication(object):
                         raise _EarlyServerExit
                     else:
                         nextIsValue = True
+                elif arg == "--createtables":
+                    self.CreateTables = True
                 else:
                     # unknown argument.
                     print "Unrecognized argument %s\n" % arg
@@ -177,6 +184,9 @@ class ServerApplication(object):
         if self.DaemonMode and not self.DaemonPath:
             # use the default
             self.DaemonPath = "/"
+        if self.DaemonMode and self.CreateTables:
+            # can't mix these
+            print "Cannot use --daemon and --createtables simultaneously."
     
     def ShowCLIHelp(self):
         '''Shows the command line help arguments.'''
@@ -192,6 +202,9 @@ class ServerApplication(object):
             print "\t--daemon-user [user]\tUser to run daemon as."
             print "\t--daemon-pid [file]\tPID file to track daemon with."
             print "\t--daemon-path [dir]\tPath to run daemon under."
+        
+        print "\nDatabase management commands:"
+        print "\t--createtables\t\tCreate all database tables and exit."
     
     def ShowVersionInfo(self):
         '''Shows the version information.'''
@@ -214,10 +227,10 @@ class ServerApplication(object):
         # Configure the main logger.
         MainLogger = logging.getLogger("Server.Main")
         MainLogger.setLevel(logging.DEBUG)
-        baselogpath = os.path.join(self.Config['Logging.Directory.Path'],
+        baselogpath = os.path.join(self.Config['Logging/Directory'],
                                    "main.log")
-        maxbytes = self.Config['Logging.Rotator.MaxSize']
-        maxlogs = self.Config['Logging.Rotator.LogCount']
+        maxbytes = self.Config['Logging/Rotator/MaxSize']
+        maxlogs = self.Config['Logging/Rotator/LogCount']
         MainHandler = handlers.RotatingFileHandler(baselogpath,
                                                            maxBytes=maxbytes,
                                                            backupCount=maxlogs)
@@ -229,7 +242,7 @@ class ServerApplication(object):
         # Configure the chat logger.
         ChatLogger = logging.getLogger("Server.Chat")
         ChatLogger.setLevel(logging.INFO)
-        chatlogpath = os.path.join(self.Config['Logging.Directory.Path'],
+        chatlogpath = os.path.join(self.Config['Logging/Directory'], 
                                    "chat.log")
         ChatHandler = handlers.RotatingFileHandler(chatlogpath,
                                                            maxBytes=maxbytes,
@@ -305,13 +318,25 @@ class ServerApplication(object):
             mainlog.critical(msg)
             raise _EarlyServerExit
         
-        # now initialize the listening socket
+        # now initialize the network server objects
         try:
-            self.Server = ServerNetworking.NetworkServer()
+            # IPv4 and IPv6 use independent server objects
+            if self.Config['Network/Address/IPv4/Enabled']:
+                self.Servers.append(ServerNetworking.IPv4Server())
+            if self.Config['Network/Address/IPv6/Enabled']:
+                self.Servers.append(ServerNetworking.IPv6Server())
+            
+            # Make sure that there's at least one operational server object
+            if len(self.Servers) < 1:
+                msg = "At least one of either IPv4 or IPv6 must be enabled."
+                mainlog.critical(msg)
+                raise _EarlyServerExit
         except ServerNetworking.NetworkStartupError:
             msg = "Could not create network server; server cannot start."
             mainlog.critical(msg)
             raise _EarlyServerExit
+        except _EarlyServerExit:
+            raise
         except:
             msg = "Unhandled exception while creating network server.\n\n"
             msg += traceback.format_exc()
@@ -340,13 +365,38 @@ class ServerApplication(object):
     def _Run_Core(self):
         '''Runs the main part of the application.'''
         # okay, now let's try loading the main configuration file
-        self.Config = Configuration.LoadConfigFile(self.ConfigFilePath)
-        if not self.Config:
-            # bail out
+        transformers = ServerConfig.KnownTransformers
+        try:
+            self.Config = ConfigurationFile(self.ConfigFilePath,
+                                        defaults=ServerConfig.DefaultValues,
+                                        transformers=transformers)
+        except IOError as err:
+            # file i/o error
+            args = (self.ConfigFilePath, err[1])
+            msg = "Error reading configuration file %s: %s." % args
+            mainlog.critical(msg)
+            return -1
+        except ParseError as err:
+            # syntax error
+            args = (self.ConfigFilePath, err)
+            msg = "In configuration file %s: %s." % args
+            mainlog.critical(msg)
             return -1
         
         # configure the logger
         self.ConfigureLogger()
+        
+        # start up the database engine
+        try:
+            Database.InitDB(self.Config)
+        except:
+            # bail out
+            return -1
+        
+        # Any database management commands to execute?
+        if self.CreateTables:
+            Database.CreateTables()
+            return 0
         
         # set up the network
         try:
@@ -366,7 +416,8 @@ class ServerApplication(object):
         return 0
 
 
-if __name__ == "__main__":
+def Main():
+    '''Runs the application.'''
     # run the application
     ServerGlobals.Application = ServerApplication()
     app = ServerGlobals.Application

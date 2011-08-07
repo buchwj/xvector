@@ -35,6 +35,12 @@ Uint16Struct = struct.Struct("<H")
 Sint16Struct = struct.Struct("<h")
 '''Pre-made struct object for serialization of signed 16-bit integers.'''
 
+Uint8Struct = struct.Struct("<B")
+'''Pre-made struct object for serialization of unsigned 8-bit integers.'''
+
+Sint8Struct = struct.Struct("<b")
+'''Pre-made struct object for serialization of signed 8-bit integers.'''
+
 class EndOfFile(IOError): pass
 '''Special version of IOError for use when EOF is encountered.'''
 
@@ -106,7 +112,7 @@ def DeserializeUTF8(fileobj, maxlen=0):
     @return: The deserialized Unicode string.
     """
     # figure out what we're deserializing
-    widthbin = UnpackStruct(Uint32Struct, fileobj)
+    widthbin = DeserializeUint32(fileobj)
     if maxlen > 0 and (widthbin > 4*maxlen):
         # for UTF-8, there's no way this doesn't exceed max length
         # (UTF-8's largest character codes are 4 bytes long)
@@ -270,7 +276,8 @@ def SerializeUint8(streamobj, uint):
     @type uint: Byte
     @param uint: Unsigned 8-bit integer to serialize
     '''
-    streamobj.write(uint)
+    tmpstr = Uint8Struct.pack(uint)
+    streamobj.write(tmpstr)
 
 
 def DeserializeUint8(streamobj):
@@ -285,10 +292,7 @@ def DeserializeUint8(streamobj):
     
     @return: Unsigned 8-bit integer deserialized from the stream.
     '''
-    uint = streamobj.read(1)
-    if not uint or len(uint) != 1:
-        raise EndOfFile
-    return int(uint)
+    return UnpackStruct(Uint8Struct, streamobj)[0]
 
 
 SerializeASCII = SerializeBinary

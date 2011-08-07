@@ -111,13 +111,17 @@ class Packet(object):
     The base class of all packets, containing only a header with no body.
     '''
     
-    def __init__(self):
+    def __init__(self, connection):
         '''
-        Creates a new empty packet, either blank or from binary data.
+        Creates a new empty packet.
         
-        @type data: binary data
-        @param data: Data to build the packet from.
+        @type connection: Networking.BaseConnectionHandler
+        @param connection: Connection with which this packet is associated.
         '''
+        # Internal management attributes.
+        self.Connection = connection
+        '''Connection with which this packet is associated.'''
+        
         # Packet header attributes.
         self.PacketType = UnknownType
         '''Packet type, one of the constants in xVLib.Packets.'''
@@ -125,6 +129,14 @@ class Packet(object):
         # Internal flags
         self._HasBody = False
         '''Subclasses which have bodies should set this to True.'''
+    
+    def SendPacket(self):
+        '''
+        Convenience function that sends this packet over the connection.
+        
+        This is equivalent to calling self.Connection.SendPacket(self).
+        '''
+        self.Connection.SendPacket(self)
     
     def GetBinaryForm(self):
         '''
@@ -304,17 +316,28 @@ ProtocolSignature = b'\xa0\xd0'
 '''Protocol signature of official protocol.'''
 
 
-class VersionMismatch(Exception): pass
-'''Raised if the the client and server version do not match.'''
-
-
 class NegotiateConnectionPacket(Packet):
     '''Packet class for the NegotiateConnection packet type.'''
     
-    def __init__(self):
-        '''Creates a new NegotiateConnection packet.'''
+    def __init__(self, connection):
+        '''
+        Creates a new NegotiateConnection packet.
+        
+        @type connection: Networking.BaseConnectionHandler
+        @param connection: Connection with which this packet is associated.
+        '''
         # Inherit base class behavior.
-        super(NegotiateConnectionPacket,self).__init__()
+        super(NegotiateConnectionPacket,self).__init__(connection)
+        
+        # Declare attributes.
+        self.Signature = None
+        '''Protocol signature.  Read-only, you do not need to set this.'''
+        self.Revision = 0
+        '''Protocol revision.  Read-only, you do not need to set this.'''
+        self.MajorVersion = 0
+        '''Major version.  Read-only, you do not need to set this.'''
+        self.MinorVersion = 0
+        '''Minor version.  Read-only, you do not need to set this.'''
         
         # Declare our type.
         self.PacketType = NegotiateConnection
@@ -340,14 +363,13 @@ class NegotiateConnectionPacket(Packet):
         signature = stream.read(len(ProtocolSignature))
         if len(signature) != len(ProtocolSignature):
             raise IncompletePacket
-        if signature != ProtocolSignature:
-            raise CorruptPacket
+        self.Signature = signature
         
         # check the version
         try:
-            revision = BinaryStructs.DeserializeUint16(stream)
-            major = BinaryStructs.DeserializeUint16(stream)
-            minor = BinaryStructs.DeserializeUint16(stream)
+            self.Revision = BinaryStructs.DeserializeUint16(stream)
+            self.MajorVersion = BinaryStructs.DeserializeUint16(stream)
+            self.MinorVersion = BinaryStructs.DeserializeUint16(stream)
         except BinaryStructs.EndOfFile:
             raise IncompletePacket
         except:
@@ -355,10 +377,6 @@ class NegotiateConnectionPacket(Packet):
             msg += traceback.format_exc()
             logging.error(msg)
             raise CorruptPacket
-        if (revision != ProtocolRevision or major != Version.MajorVersion
-            or minor != Version.MinorVersion):
-            # no tolerance for different versions right now...
-            raise VersionMismatch
 
 
 class ConnectionAcceptedPacket(Packet):
@@ -370,11 +388,17 @@ class ConnectionAcceptedPacket(Packet):
     Flag_NoRegister = 1
     '''Login screen flag indicating that in-client registration is disabled.'''
     
-    def __init__(self):
-        '''Creates a blank ConnectionAccepted packet.'''
+    def __init__(self, connection):
+        '''
+        Creates a blank ConnectionAccepted packet.
+        
+        @type connection: Networking.BaseConnectionHandler
+        @param connection: Connection with which this packet is associated.
+        '''
         # Inherit base class behavior.
-        super(ConnectionAcceptedPacket,self).__init__()
+        super(ConnectionAcceptedPacket,self).__init__(connection)
         self._HasBody = True
+        self.PacketType = ConnectionAccepted
         
         # Declare body attributes.
         self.RegistrationDisabled = False
@@ -443,9 +467,9 @@ class ConnectionRejectedPacket(Packet):
     Error_NoSlots = 6
     
     
-    def __init__(self):
+    def __init__(self, connection):
         # Inherit base class behavior.
-        super(ConnectionRejectedPacket, self).__init__()
+        super(ConnectionRejectedPacket, self).__init__(connection)
         self._HasBody = True
         
         # Set packet type.
@@ -476,9 +500,9 @@ class ConnectionRejectedPacket(Packet):
 class KeepAlivePacket(Packet):
     '''Packet class for the KeepAlive packet type.'''
     
-    def __init__(self):
+    def __init__(self, connection):
         # Inherit base class behavior.
-        super(KeepAlivePacket,self).__init__()
+        super(KeepAlivePacket,self).__init__(connection)
         
         # Set packet type.
         self.PacketType = KeepAlive
@@ -487,9 +511,9 @@ class KeepAlivePacket(Packet):
 class SuccessPacket(Packet):
     '''Packet class for the Success packet type.'''
     
-    def __init__(self):
+    def __init__(self, connection):
         # Inherit base class behavior.
-        super(SuccessPacket,self).__init__()
+        super(SuccessPacket,self).__init__(connection)
         self._HasBody = True
         
         # Set packet type.
@@ -527,8 +551,8 @@ class SuccessPacket(Packet):
 class FailedPacket(SuccessPacket):
     '''Packet class for the Failed packet type.'''
     
-    def __init__(self):
-        super(FailedPacket,self).__init__()
+    def __init__(self, connection):
+        super(FailedPacket,self).__init__(connection)
         self.PacketType = Failed
 
 
@@ -550,9 +574,15 @@ C{xVLib.Packets.PacketTypes[type]()} to get a blank packet object.
 '''
 
 
-def BuildPacketFromStream(stream):
+def BuildPacketFromStream(stream, connection):
     '''
     Attempts to build a packet from a data stream.
+    
+    @type stream: file-like object
+    @param stream: Data stream to build packet from.
+    
+    @type connection: Networking.BaseConnectionHandler
+    @param connection: Connection with which to associate the packet.
     
     @raise IncompletePacket: Raised if not enough data is present.
     @raise CorruptPacket: Raised if something is wrong with the data.
@@ -580,8 +610,60 @@ def BuildPacketFromStream(stream):
     except KeyError:
         # unrecognized packet type
         raise CorruptPacket
-    NewPacket = PacketProto()
+    NewPacket = PacketProto(connection)
     
     # and now fill in the packet with the data...
     NewPacket.DecodeFromData(stream)
     return NewPacket
+
+
+##
+## Packet handling interfaces
+##
+
+class PacketHandler(object):
+    '''
+    Interface which handles packets after they are received.
+    '''
+    
+    def __init__(self):
+        '''Creates an empty packet handler.'''
+        pass    # Nothing to do
+    
+    def HandlePacket(self, packet):
+        '''
+        Called to handle a packet.
+        
+        This must be reimplemented by all subclasses.
+        
+        @type packet: Packet
+        @param packet: Packet to handle
+        '''
+        raise NotImplementedError
+
+
+class PacketRouter(PacketHandler):
+    '''
+    Routes packets to the appropriate handlers, based on packet type.
+    
+    The manager itself is actually a packet handler; instead of actaully
+    handling anything, though, it simply reroutes packets appropriately.
+    '''
+    
+    def __init__(self):
+        '''Creates an empty packet handler manager.'''
+        # Declare attributes.
+        self.Handlers = dict()
+        '''Maps packet IDs to their handler objects.'''
+        self.DefaultHandler = None
+        '''Default handler for unmatched packet types.'''
+    
+    def HandlePacket(self, packet):
+        # Do we handle this packet?
+        try:
+            ptype = packet.PacketType
+            handler = self.Handlers[ptype]
+            handler.HandlePacket(packet)
+        except KeyError:
+            # no, don't have it, pass it off to the default handler
+            self.DefaultHandler.HandlePacket(packet)

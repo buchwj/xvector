@@ -46,9 +46,10 @@ setup(name='xVServer',
         "Topic :: Games/Entertainment :: Role-Playing",
       ],
       
-      packages=['xVServer'],
+      packages=['xVServer', 'xVServer.Models'],
       data_files=[('', ['LICENSE', 'CREDITS']),
                   ('config', ['config/*.xml'])],
+      scripts=['bin/xVServer.py', 'bin/xVManageDB.py'],
       provides=['xVServer'],
       requires=['xVLib (==0.0.1)'],
 )

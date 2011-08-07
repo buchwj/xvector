@@ -26,6 +26,14 @@ import time
 import cStringIO
 from . import Packets
 
+# A few constants...
+
+TimeoutLimit = 60
+'''
+Number of seconds of network inactivity before a connection is "timed out."
+'''
+
+
 class BaseConnectionHandler(asyncore.dispatcher_with_send):
     '''
     The base class of all ConnectionHandler objects.
@@ -48,12 +56,16 @@ class BaseConnectionHandler(asyncore.dispatcher_with_send):
         asyncore.dispatcher_with_send.__init__(self, sock)
         
         # Set up our initial timeout tracker.
-        self.last_activity = time.time()
+        self.LastActivity = time.time()
         '''Time at which last network activity occurred.'''
         
         # Create the buffer.
         self.RecvBuffer = b""
         '''Buffer of received data; packets are built from this.'''
+    
+    @property
+    def Address(self):
+        return self.socket.getpeername()
     
     def SendPacket(self, packet):
         '''
@@ -66,6 +78,18 @@ class BaseConnectionHandler(asyncore.dispatcher_with_send):
         data = packet.GetBinaryForm()
         self.send(data)
     
+    def CheckTimeout(self):
+        '''
+        Checks if the connection has timed out.
+        
+        If the connection has timed out, this will call the OnTimeout() method.
+        '''
+        # check timeout
+        delta = time.time() - self.LastActivity
+        if delta > TimeoutLimit:
+            # connection timed out
+            self.OnTimeout()
+    
     def _TryPacketBuild(self):
         '''Tries to build a packet from the read buffer.'''
         # Make sure the buffer isn't empty.
@@ -77,7 +101,7 @@ class BaseConnectionHandler(asyncore.dispatcher_with_send):
             BufferStream = cStringIO.StringIO(self.RecvBuffer)
         
             # try to build the packet
-            NewPacket = Packets.BuildPacketFromStream(BufferStream)
+            NewPacket = Packets.BuildPacketFromStream(BufferStream, self)
         
             # If we get here, it worked.  Drop the data from the buffer.
             PacketEnd = BufferStream.tell()
@@ -113,6 +137,15 @@ class BaseConnectionHandler(asyncore.dispatcher_with_send):
         '''
         raise NotImplementedError
     
+    def OnTimeout(self):
+        '''
+        Called when the connection times out.
+        
+        Must be reimplemented by all subclasses.
+        '''
+        raise NotImplementedError
+        
+    
     ##
     ## low-level callbacks
     ##
@@ -127,6 +160,9 @@ class BaseConnectionHandler(asyncore.dispatcher_with_send):
         
         This is a reimplemented callback method from dispatcher_with_send.
         '''
+        # reset the timeout
+        self.LastActivity = time.time()
+        
         # receive data, append to buffer
         data = self.recv(8192)
         self.RecvBuffer += data
