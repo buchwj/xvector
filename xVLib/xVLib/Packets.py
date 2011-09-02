@@ -223,7 +223,14 @@ class Packet(object):
                 data = cStringIO.StringIO(decompressed)
             else:
                 data = stream
-            self.DeserializeBody(data)
+            
+            try:
+                self.DeserializeBody(data)
+            except:
+                msg = "Unhandled exception in DeserializeBody(), packet type "
+                msg += str(self.PacketType)
+                logging.error(msg)
+                raise CorruptPacket
             if compressed:
                 data.close()
     
@@ -310,6 +317,56 @@ class Packet(object):
         '''
         # not implemented in the base class (no body)
         pass
+
+
+class RequestPacketMixin(object):
+    '''
+    Mixin class that provides request-response support for packets.
+    
+    In order to use this mixin, the packet must have a RequestSerial attribute
+    which is an integer.
+    '''
+    
+    def __init__(self, connection=None):
+        '''
+        Creates attributes for the mixin class.
+        '''
+        # Create attributes.
+        self.RequestSerial = 0
+        '''Serial number for this request.'''
+        
+        # Next __init__ method...
+        super(RequestPacketMixin, self).__init__(connection)
+    
+    def ReplySuccess(self, reason):
+        '''
+        Replies to the request with the Success packet.
+        
+        @type reason: integer
+        @param reason: Reason code for success.
+        '''
+        # Build a reply packet.
+        reply = SuccessPacket(self.Connection)
+        reply.RequestSerial = self.RequestSerial
+        reply.ReasonCode = reason
+        
+        # Send reply.
+        reply.SendPacket()
+    
+    def ReplyFailed(self, reason):
+        '''
+        Replies to the request with the Failed packet.
+        
+        @type reason: integer
+        @param reason: Reason code for failure.
+        '''
+        # Build a reply packet.
+        reply = FailedPacket(self.Connection)
+        reply.RequestSerial = self.RequestSerial
+        reply.ReasonCode = reason
+        
+        # Send reply.
+        reply.SendPacket()
 
 
 ProtocolSignature = b'\xa0\xd0'
@@ -556,6 +613,212 @@ class FailedPacket(SuccessPacket):
         self.PacketType = Failed
 
 
+class StartLoginPacket(Packet):
+    '''Packet class for the StartLogin packet type.'''
+    
+    def __init__(self, connection):
+        # Set up basic packet information.
+        super(StartLoginPacket,self).__init__(connection)
+        self.PacketType = StartLogin
+        self._HasBody = True
+        
+        # Declare field attributes.
+        self.Username = u""
+        '''Unicode string containing the username to login as.'''
+    
+    def SerializeBody(self):
+        data = cStringIO.StringIO()
+        BinaryStructs.SerializeUTF8(data, self.Username, maxlen=32)
+        retval = data.getvalue()
+        data.close()
+        return retval
+    
+    def DeserializeBody(self, stream):
+        # Read values.
+        try:
+            self.Username = BinaryStructs.DeserializeUTF8(stream, maxlen=32)
+        except BinaryStructs.EndOfFile:
+            raise IncompletePacket
+        except:
+            msg = "Unhandled exception in DeserializeBody, packet type 6."
+            msg += "\n%s" % traceback.format_exc()
+            logging.error(msg)
+            raise CorruptPacket
+
+
+class LoginChallengePacket(Packet):
+    '''
+    Packet class for the LoginChallenge packet type.
+    '''
+    
+    def __init__(self, connection):
+        # Set up packet.
+        super(LoginChallengePacket, self).__init__(connection)
+        self.PacketType = LoginChallenge
+        self._HasBody = True
+        
+        # Declare field attributes.
+        self.Salt = b""
+        '''Password salt associated with this account. (16 bytes)'''
+        self.Challenge = b""
+        '''Login challenge. (32 bytes)'''
+    
+    def SerializeBody(self):
+        # Write values.
+        data = cStringIO.StringIO()
+        BinaryStructs.SerializeBinary(data, self.Salt, maxlen=16)
+        BinaryStructs.SerializeBinary(data, self.Challenge, maxlen=32)
+        retval = data.getvalue()
+        data.close()
+        return retval
+    
+    def DeserializeBody(self, stream):
+        # Read values.
+        try:
+            self.Salt = BinaryStructs.DeserializeBinary(stream, maxlen=16)
+            self.Challenge = BinaryStructs.DeserializeBinary(stream, maxlen=32)
+        except BinaryStructs.EndOfFile:
+            raise IncompletePacket
+
+
+class FinishLoginPacket(Packet, RequestPacketMixin):
+    '''Packet class for the FinishLogin packet type.'''
+    
+    def __init__(self, connection):
+        # Set up packet.
+        super(FinishLoginPacket, self).__init__(connection)
+        self.PacketType = FinishLogin
+        self._HasBody = True
+        
+        # Declare field attributes.
+        self.ChallengeSolution = b""
+        '''Challenge solution (SHA-256 hash of [SHA512:salt+pwd]+challenge).'''
+    
+    def SerializeBody(self):
+        # Write data.
+        data = cStringIO.StringIO()
+        BinaryStructs.SerializeUint32(data, self.RequestSerial)
+        BinaryStructs.SerializeBinary(data, self.ChallengeSolution, maxlen=32)
+        retval = data.getvalue()
+        data.close()
+        return retval
+    
+    def DeserializeBody(self, stream):
+        # Read data.
+        try:
+            self.RequestSerial = BinaryStructs.DeserializeUint32(stream)
+            self.ChallengeSolution = BinaryStructs.DeserializeBinary(stream,
+                                                                     maxlen=32)
+        except BinaryStructs.EndOfFile:
+            raise IncompletePacket
+
+
+class BadLoginPacket(Packet):
+    '''
+    Packet class for the BadLogin packet type.
+    
+    The BadLogin packet is sent in response to a StartLogin packet that is
+    rejected.  Typical reasons are that the username is not registered, or too
+    many failed login attempts have been made on the account.
+    '''
+    
+    ##
+    ## Reason codes
+    ##
+    
+    Reason_GeneralFailure = 0
+    '''General login failure.'''
+    Reason_LockedOut = 1
+    '''Locked out due to too many login attempts.'''
+    Reason_BadUsername = 2
+    '''Account does not exist.'''
+    Reason_WaitForLogin = 3
+    '''Timeout between logins not yet elapsed; try again later.'''
+    
+    
+    ##
+    ## Methods
+    ##
+    
+    def __init__(self, connection):
+        # Set up packet.
+        super(BadLoginPacket, self).__init__(connection)
+        self.PacketType = BadLogin
+        self._HasBody = True
+        
+        # Declare field attributes.
+        self.Reason = 0
+        '''Reason code for the StartLogin rejection.'''
+    
+    def SerializeBody(self):
+        # Write data.
+        data = cStringIO.StringIO()
+        BinaryStructs.SerializeUint16(data, self.Reason)
+        retval = data.getvalue()
+        data.close()
+        return retval
+    
+    def DeserializeBody(self, stream):
+        # Read data.
+        try:
+            self.Reason = BinaryStructs.DeserializeUint16(stream)
+        except BinaryStructs.EndOfFile:
+            raise IncompletePacket
+
+
+class RegisterPacket(Packet, RequestPacketMixin):
+    '''
+    Packet class for the Register packet type.
+    
+    The Register packet type is sent from the client to the server to create
+    a new account.  It is a standard request packet, so a reply of either
+    Success or Failed should be expected.  If the server accepts the
+    registration, it will automatically log the requesting connection into the
+    newly created account.
+    '''
+    
+    def __init__(self, connection):
+        # Set up packet.
+        super(RegisterPacket, self).__init__(connection)
+        self.PacketType = Register
+        self._HasBody = True
+        
+        # Declare field attributes.
+        self.RequestSerial = 0
+        '''Request serial for this packet.'''
+        self.Username = u""
+        '''Username of the new account.  (Max length: 32 characters)'''
+        self.Salt = b""
+        '''Password salt for the new account.  (Length: 16 bytes)'''
+        self.PasswordHash = b""
+        '''[salt+password] SHA-512 hash.  (Length: 64 bytes)'''
+        self.Email = u""
+        '''Email for the new account.  (Max length: 64 characters)'''
+    
+    def SerializeBody(self):
+        # Write data.
+        data = cStringIO.StringIO()
+        BinaryStructs.SerializeUint32(data, self.RequestSerial)
+        BinaryStructs.SerializeUTF8(data, self.Username, maxlen=32)
+        BinaryStructs.SerializeBinary(data, self.Salt, maxlen=16)
+        BinaryStructs.SerializeBinary(data, self.PasswordHash, maxlen=64)
+        BinaryStructs.SerializeUTF8(data, self.Email, maxlen=64)
+        retval = data.getvalue()
+        data.close()
+        return retval
+    
+    def DeserializeBody(self, stream):
+        # Read data.
+        try:
+            self.RequestSerial = BinaryStructs.DeserializeUint32(stream)
+            self.Username = BinaryStructs.DeserializeUTF8(stream, maxlen=32)
+            self.Salt = BinaryStructs.DeserializeBinary(stream, maxlen=16)
+            self.PasswordHash = BinaryStructs.DeserializeBinary(stream, 64)
+            self.Email = BinaryStructs.DeserializeUTF8(stream, maxlen=64)
+        except BinaryStructs.EndOfFile:
+            raise IncompletePacket
+
+
 PacketTypes = {
                NegotiateConnection: NegotiateConnectionPacket,
                ConnectionAccepted: ConnectionAcceptedPacket,
@@ -563,6 +826,11 @@ PacketTypes = {
                KeepAlive: KeepAlivePacket,
                Success: SuccessPacket,
                Failed: FailedPacket,
+               StartLogin: StartLoginPacket,
+               LoginChallenge: LoginChallengePacket,
+               FinishLogin: FinishLoginPacket,
+               BadLogin: BadLoginPacket,
+               Register: RegisterPacket,
                }
 '''
 dict which maps packet types to the appropriate packet classes.
@@ -656,14 +924,17 @@ class PacketRouter(PacketHandler):
         self.Handlers = dict()
         '''Maps packet IDs to their handler objects.'''
         self.DefaultHandler = None
-        '''Default handler for unmatched packet types.'''
+        '''Default handler function for unmatched packet types.'''
     
     def HandlePacket(self, packet):
         # Do we handle this packet?
         try:
             ptype = packet.PacketType
             handler = self.Handlers[ptype]
-            handler.HandlePacket(packet)
         except KeyError:
             # no, don't have it, pass it off to the default handler
-            self.DefaultHandler.HandlePacket(packet)
+            self.DefaultHandler(packet)
+            return
+        
+        # We handle it; call the handler function.
+        handler(packet)

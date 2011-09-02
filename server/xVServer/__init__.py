@@ -18,7 +18,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 __all__ = ['Database', 'MainLoop', 'ServerConfig', 'ServerCore',
-           'ServerGlobals', 'ServerNetworking', 'IPBans']
+           'ServerGlobals', 'ServerNetworking', 'IPBans', 'Accounts', 'Login']
 
 ##
 ## SQLAlchemy setup

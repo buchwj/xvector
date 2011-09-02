@@ -128,8 +128,8 @@ the type ID of the packet.  Currently supported packet types are as follows.
   3         KeepAlive (both ways)
   4         Success (server -> client)
   5         Failed (server -> client)
-  6         StartLogin (client -> server)
-  7         LoginChallenge (server -> client)
+  6         [[ Unused ]]
+  7         LoginServerInfo (server -> client)
   8         FinishLogin (client -> server, request)
   9         Register (client -> server, request)
   10        AvailableCharacter (server -> client)
@@ -370,116 +370,66 @@ described below.
  Login Process
 ---------------
 
-Following a successful connection negotiation, the next step which the client
-must take is to login.  There is no hurry to do so; as long as the client sends
-periodic KeepAlive packets while waiting for user input, the player may take
-as long as they wish to enter login information (though the server may close
-connections which have been sitting in the login phase if connection slots must
-be freed).
+Following a successful connection negotiation, the next step is to log in.
+Login is handled by a separate (but very simple) protocol described in the
+"protocol_login" file and is handled through a separate connection; the reason
+for this is to wrap only the login/registration protocol in SSL (to protect
+passwords against eavesdroppers), while being able to shed the SSL in favor of
+increased performance on the main game server.  This protocol is implemented as
+a component of the main server and does not run as a separate server process;
+rather, the login socket is managed alongside the main socket.  Support for
+full decoupling may be added in the future to improve server scalability; for
+now, however, this is not supported.
 
-Login is handled through a challenge-response authentication system.  This
-system should NOT be considered as cryptographically secure; as the connection
-is still a plaintext (non-SSL/non-TLS) connection, it is theoretically possible
-for a hacker using a man-in-the-middle attack to hijack a connection.  What
-this system does achieve is prevention of the password from being transmitted
-plaintext at any time, for whatever that's worth.
+As a result of this separation of functions, the core protocol only has two
+steps for authentication:
 
-To begin logging in, the client must send a StartLogin packet.  The structure
-of the StartLogin packet is given below.
+    1) Provide the client with the location of the login server.
+    2) Accept an authentication token from the client, check it against the
+       login server, and either accept or reject the connection based on this.
 
-:: Body Structure, StartLogin Packets ::
+The first step occurs immediately after a successful connection negotiation.
+The server sends a LoginServerInfo packet to the client containing the network
+address of the login server.  Since the login server must be hosted on the same
+network address as the core server, only the port must be sent.  The structure
+of the LoginServerInfo packet is described below.
 
- Type       Field
------------------------
- utf-8      username
-
-
-When the server receives this packet, it will generate 32 bytes of random data
-suitable for cryptographic use (ie. Python's os.urandom(32)). This is the
-"challenge"; the client must generate a SHA-256 hash based on the random value,
-the password salt, and the user's password in order to authenticate.  If the
-username supplied is invalid or does not correspond to an existing account, a
-BadLogin packet will be sent.
-
-There is an important security implication of this design.  Because the server
-must supply the salt, it cannot hide from a hacker whether a particular account
-exists.  An attacker could launch a "dictionary attack" of sorts against the
-server, trying different permutations of usernames to determine targets.  For
-this reason, the server must not accept any further StartLogin packets from a
-client which has failed a login for three seconds.  This induced delay helps to
-reduce the feasibility of a brute-force attack on the username list; and, even
-if such an attack were successful, the nature of the challenge-response hash
-serves to make a brute-force attack against the password considerably more
-difficult.  To further defend against a brute-force attack against the
-password, the server should temporarily lock out (for 10 to 20 minutes) any
-account which is subjected to ten consecutive failed login attempts (with a
-successful login resetting the failed login count).
-
-The structures of the LoginChallenge and BadLogin packets are described below.
-
-:: Body Structure, LoginChallenge Packets ::
+:: Body Structure, LoginServerInfo Packet ::
 
  Type       Field
------------------------
- binary     salt (base64-encoded)
- binary     challenge (base64-encoded)
+--------------------
+ uint16     login server port
 
 
-:: Body Structure, BadLogin Packets ::
+Once the client receives this packet, it may proceed to open a connection to
+the login server and either login or register.  This protocol is described in
+the "protocol_login" file and will not be covered here.  Once a successful
+login has occurred, the client must then provide the single-use authentication
+token received from the login server to the core server.  The client has only
+30 seconds to do so before the token expires.  The client provides this token
+using a FinishLogin request, the structure of which is described below.
 
- Type       Field
------------------------
- uint16     reason
-
-
-Possible reasons for a BadLogin are given below.
-
-:: BadLogin Packets, Failure Reasons ::
-
- Code       Meaning
------------------------
-    0       General failure
-    1       Account locked out
-
-
-As soon as the client receives the LoginChallenge packet from the server, it
-must complete the following procedure to solve the challenge:
-
- 1) Prepare a string: salt + password + challenge
- 2) Compute SHA-256 hash of the string from step (1).
-
-The client must then send the solution from step (2) to the server in a
-FinishLogin packet (which is a request packet).  This packet must be received
-by the server within 30 seconds of the challenge being issued or else the
-reply will automatically be Failed.  The structure of the FinishLogin packet is
-given below.
+:: Body Structure, FinishLogin Packet ::
 
  Type       Field
------------------------
- uint32     request serial
- binary      challenge solution
+---------------------
+ binary     authentication token (length=32 bytes)
 
 
-When the server receives the FinishLogin request, it compares the solution to
-its own challenge solution computed using the above procedure using the SHA-256
-hash of the user password stored in the account database.  Success and Failed
-conditions are as follows:
+The server then compares this authentication token with pending tokens in the
+login server which meet the following criteria:
 
- Success if:
-    * The client and server solutions match AND the account exists AND the
-      account is not banned AND less than 30 seconds passed between when the
-      LoginChallenge packet was sent and when the FinishLogin packet was
-      received. (code 0)
- Failed if:
-    * The client and server solutions do not match. (code 0)
-    * The account does not exist. (code 0)
-    * More than 30 seconds passed between LoginChallenge and FinishLogin.
-      (code 1)
-    * The account is banned, but login would have succeeded. (code 2)
-    * The account is not an admin account and the server is refusing non-admin
-      logins, but otherwise would have succeeded. (code 3)
-    * The account is already logged in, but otherwise would have succeeded.
-            (code 4)
+    1) Are less than 30 seconds old
+    2) Are associated with a connection from the same IP address
+    3) Have an identical authentication token
+
+Should a match be found, ownership of the account object is transferred to the
+core server and associated with the connection which sent the authentication
+token; the token is also invalidated and dropped from the pending set so that
+it may not be reused.  A response of Success is sent to the client, and the
+character selection state takes effect.
+
+If a match is not found, a response of Failed is sent with no reason code.
 
 
 --------------
@@ -503,14 +453,14 @@ sends a Register packet containing basic account information.  It should be
 noted that the password is not sent in plaintext with this method; it is hashed
 with a salt on the client side before being transmitted to the server.  As
 such, the client is responsible for generating both the salt and the hash.  The
-hash should be computed using SHA-256 and encoded as base64; the salt should be
-16 bytes long (any other length will be rejected).
+hash should be computed using SHA-512; the salt should be 16 bytes long (any
+other length will be rejected).
 
 A good way to generate a salt is to use the Python code 
 "salt = base64.b64encode(os.urandom(10))"; this will always generate a 16-byte
 salt.  The password should be appended directly after the salt when generating
 a password hash, i.e.:
-        hash = base64.b64encode(hashlib.sha256(salt + password).digest())
+        hash = hashlib.sha512(salt + password).digest()
 
 The structure of the Register packets is described below.
 
@@ -519,10 +469,10 @@ The structure of the Register packets is described below.
  Type       Field
 -----------------------
  uint32     request serial
- utf-8      desired username
- utf-8      password salt (base64-encoded)
- utf-8      password hash (base64-encoded)
- utf-8      email
+ utf-8      desired username (max length=32)
+ binary     password salt (length=16)
+ binary     [salt + password] hash (length=64)
+ utf-8      email (max length=64)
 
 
 When the server receives a Register packet, it will determine whether or not

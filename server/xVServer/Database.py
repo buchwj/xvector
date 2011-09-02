@@ -40,6 +40,15 @@ bound to an engine following engine creation.
 '''
 
 
+MainSession = None
+'''
+Main Session instance for SQLAlchemy.
+
+This is a Session object, NOT the return of sessionmaker().  For that, see the
+Session variable.
+'''
+
+
 Base = None
 '''
 Declarative base object for SQLAlchemy.
@@ -70,7 +79,7 @@ def _InitDB_sqlite(config):
         raise DatabaseStartupError
     
     # Connect to the database.
-    global Engine
+    global Engine, MainSession
     try:
         Engine = create_engine(uri)
     except Exception as err:
@@ -78,6 +87,7 @@ def _InitDB_sqlite(config):
         mainlog.critical(msg)
         raise DatabaseStartupError
     Session.configure(bind=Engine)
+    MainSession = Session()
 
 
 def _InitDB_other(config):
@@ -111,10 +121,9 @@ def _InitDB_other(config):
     
     # Put it all together.
     uri = "%s://%s%s/%s" % (type, auth, address, dbname)
-    print "[debug] db uri: " + uri
     
     # Connect to database.
-    global Engine, Session
+    global Engine, MainSession
     try:
         Engine = create_engine(uri)
     except Exception as err:
@@ -122,9 +131,7 @@ def _InitDB_other(config):
         mainlog.critical(msg)
         raise DatabaseStartupError
     Session.configure(bind=Engine)
-    print "[debug] Engine =", Engine
-    print "[debug] Session =", Session
-    print "[debug] Base =", Base
+    MainSession = Session()
 
 
 def InitDB(config):

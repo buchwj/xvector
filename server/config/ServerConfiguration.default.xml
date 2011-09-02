@@ -191,6 +191,15 @@
         </Address>
         
         <!--
+          This next section tells the login server how to behave on the
+          network.
+          -->
+        <LoginServer>
+            <!-- Port that the login server binds to (default is 24021) -->
+            <Port>24021</Port>
+        </LoginServer>
+
+        <!--
           These next settings control how many connections can be made to the
           server, both individually per IP and overall.  Setting these options
           carefully can help to prevent your server from becoming overloaded.

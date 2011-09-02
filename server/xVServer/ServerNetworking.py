@@ -26,22 +26,11 @@ import traceback
 import asyncore
 import socket
 
-from xVLib import Networking, Packets, Version
-from . import ServerGlobals, IPBans
+from xVLib import Networking
+from . import ServerGlobals, IPBans, ConnectionNegotiation, Login
 
 # stuff we use later
 mainlog = logging.getLogger("Server.Main")
-
-
-##
-## State constants
-##
-State_Negotiate = 0
-State_WaitForLogin = 1
-State_Login = 2
-State_CharacterSelect = 3
-State_CharacterCreate = 4
-State_Game = 5
 
 
 class ConnectionClosed(Exception): pass
@@ -51,6 +40,39 @@ class ConnectionClosed(Exception): pass
 class ServerConnection(Networking.BaseConnectionHandler):
     '''
     Server-side connection handler for a single connection.
+    '''
+    
+    ##
+    ## State constants.
+    ##
+    
+    State_Negotiate = 0
+    '''Connection negotiation state.'''
+    State_WaitForLogin = 1
+    '''State in which the server waits for the client to login or register.'''
+    State_Login = 2
+    '''State in which the server is processing a challenge-response login.'''
+    State_CharacterSelect = 3
+    '''State in which the user is selecting a character.'''
+    State_CharacterCreate = 4
+    '''State in which the user is creating a new character.'''
+    State_Game = 5
+    '''State in which the user is playing the game.'''
+    
+    
+    ##
+    ## State packet routers.
+    ##
+    StateRouters = {
+        State_Negotiate: ConnectionNegotiation.ConnectionNegotiationRouter,
+        State_WaitForLogin: Login.WaitForLoginRouter,
+        State_Login: Login.LoginRouter,
+        State_CharacterSelect: None,                # TODO: Implement
+        State_CharacterCreate: None,                # TODO: Implement
+        State_Game: None,                           # TODO: Implement
+    }
+    '''
+    Maps connection states to their packet router classes.
     '''
     
     def __init__(self, sock=None):
@@ -64,10 +86,21 @@ class ServerConnection(Networking.BaseConnectionHandler):
         Networking.BaseConnectionHandler.__init__(self, sock)
         
         # Set the initial state.
-        self.State = State_Negotiate
+        self.State = self.State_Negotiate
         '''Current state.'''
-        self.Router = StateRouters[self.State]()
+        self.Router = self.StateRouters[self.State]()
         '''Current packet router.'''
+        print "[debug] self.Router = %s" % self.Router
+        
+        # Declare account management attributes.
+        self._Account = None
+        '''Account associated with this connection.'''
+        
+        # Login state tracking attributes.
+        self.LoginChallenge = None
+        '''Login challenge for the current login attempt.'''
+        self.LastLogin = 0
+        '''Time of the last login attempt.'''
         
         # Register the connection.
         msg = "New connection from %s." % self.Address[0]
@@ -77,26 +110,37 @@ class ServerConnection(Networking.BaseConnectionHandler):
             App.Connections.AddConnection(self)
         except ConnectionLimitExceeded:
             self.close()
+        except BannedIPAddress:
+            self.close()
     
     def SetState(self, newstate):
         self.State = newstate
         
         # Adjust the packet router.
-        self.Router = StateRouters[newstate]()
+        self.Router = self.StateRouters[newstate]()
     
     ##
     ## connection information properties
     ##
     
-    @property
-    def AccountName(self):
-        '''Read-only property for accessing the connected account's name.'''
+    def GetAccountName(self):
+        '''Old-style class getter for the connected account's name.'''
+        if self.Account:
+            return self.Account.Username
+        else:
+            return None
+    
+    def GetCharacterName(self):
+        '''Old-style class getter for the connected character's name.'''
         return None     # TODO: Implement
     
-    @property
-    def CharacterName(self):
-        '''Read-only property for accessing the connected character's name.'''
-        return None     # TODO: Implement
+    def GetAccount(self):
+        '''Old-style class getter for the associated account.'''
+        return self._Account
+    
+    def SetAccount(self, newaccount):
+        '''Old-style class setter for the associated account.'''
+        self._Account = newaccount
     
     ##
     ## reimplemented methods from Networking.BaseConnectionHandler
@@ -165,7 +209,10 @@ class ServerConnection(Networking.BaseConnectionHandler):
         
         # Deregister the connection.
         App = ServerGlobals.Application
-        App.Connections.RemoveConnection(self)
+        try:
+            App.Connections.RemoveConnection(self)
+        except UnregisteredConnection:
+            pass
         
         # Inherit base class behavior.
         asyncore.dispatcher_with_send.close(self)
@@ -181,6 +228,10 @@ class UnregisteredConnection(Exception): pass
 
 class NameAlreadyInUse(Exception): pass
 '''Raised if an account or character name is already in use.'''
+
+
+class BannedIPAddress(Exception): pass
+'''Raised if the connection's IP address is banned.'''
 
 
 class ConnectionManager(object):
@@ -214,16 +265,27 @@ class ConnectionManager(object):
         '''Maps address strings to the number of connections from them.'''
     
     def AddConnection(self, conn):
-        '''Adds a connection.'''
+        '''
+        Adds a connection.
+        
+        @type conn: ServerConnection
+        @param conn: Connection to add.
+        '''
         # check that the connection isn't already added
         if conn in self.ConnectionSet:
             # already added, continue
             return
         
+        # Make sure the connection's IP isn't banned.
+        addr = conn.Address
+        if IPBans.IsBanned(addr[0]):
+            msg = "%s - IP is banned, rejecting connection." % addr[0]
+            mainlog.info(msg)
+            raise BannedIPAddress
+        
         # now register the connection
         App = ServerGlobals.Application
         maxtotal = App.Config['Network/Connections/Max']
-        addr = conn.Address
         if len(self.ConnectionSet) > maxtotal:
             # Total connection limit exceeded
             msg = "Too many total connections, rejecting from %s." % addr[0]
@@ -237,7 +299,7 @@ class ConnectionManager(object):
             if self.AddressConnectCount[addr[0]] > maxip:
                 # Per-IP connection limit exceeded.
                 msg = "Too many connections from %s, rejecting." % addr[0]
-                mainlog.warning(msg)
+                mainlog.info(msg)
                 raise ConnectionLimitExceeded
             self.AddressConnectCount[addr[0]] += 1
         else:
@@ -269,14 +331,15 @@ class ConnectionManager(object):
             raise UnregisteredConnection
         
         # is there a change of account?
-        if conn.AccountName:
-            if conn.AccountName in self.ByAccountName:
-                if self.ByAccountName[conn.AccountName] != conn:
+        acctname = conn.GetAccountName()
+        if acctname:
+            if acctname in self.ByAccountName:
+                if self.ByAccountName[acctname] != conn:
                     # account already connected by other connection
                     raise NameAlreadyInUse
             else:
                 # register
-                self.ByAccountName[conn.AccountName] = conn
+                self.ByAccountName[acctname] = conn
         else:
             if oldAccount:
                 # does this connection actually own that account?
@@ -289,10 +352,11 @@ class ConnectionManager(object):
                     pass
         
         # is there a change of character?
-        if conn.CharacterName:
+        charname = conn.GetCharacterName()
+        if charname:
             # we don't have to check for it to already be logged in since the
             # character is tied to a single account
-            self.ByCharacterName[conn.CharacterName] = conn
+            self.ByCharacterName[charname] = conn
         else:
             if oldChar:
                 try:
@@ -311,20 +375,19 @@ class ConnectionManager(object):
         '''
         # make sure the connection is registered
         if conn not in self.ConnectionSet:
-            # not registered
-            addr = conn.Address[0]
-            msg = "Tried to remove an unregistered connection from %s." % addr
-            mainlog.error(msg)
+            # not registered; don't report, this might be legitimate
+            # (premature close() due to IP ban, etc.)
             raise UnregisteredConnection
         addr = conn.Address[0]
         
         # remove the connection from the lookup tables
-        if conn.CharacterName:
+        charname = conn.GetCharacterName()
+        if charname:
             try:
-                if self.ByCharacterName[conn.CharacterName] == conn:
-                    del self.ByCharacterName[conn.CharacterName]
+                if self.ByCharacterName[charname] == conn:
+                    del self.ByCharacterName[charname]
                 else:
-                    args = (addr, conn.CharacterName)
+                    args = (addr, charname)
                     msg = "%s - Tried to deregister character %s not "
                     msg += "associated with the connection."
                     msg %= args
@@ -332,12 +395,13 @@ class ConnectionManager(object):
             except:
                 pass
         
-        if conn.AccountName:
+        acctname = conn.GetAccountName()
+        if acctname:
             try:
-                if self.ByAccountName[conn.AccountName] == conn:
-                    del self.ByAccountName[conn.AccountName]
+                if self.ByAccountName[acctname] == conn:
+                    del self.ByAccountName[acctname]
                 else:
-                    args = (addr, conn.AccountName)
+                    args = (addr, acctname)
                     msg = "%s - Tried to deregister account %s not associated "
                     msg += "with the connection."
                     msg %= args
@@ -397,6 +461,13 @@ class NetworkServer(asyncore.dispatcher):
         # wrap the connection
         sock = pair[0]
         conn = ServerConnection(sock)
+    
+    def handle_error(self):
+        '''Called when an unhandled exception is raised.'''
+        # show an error
+        msg = "Unhandled exception in NetworkServer:\n" 
+        msg += traceback.format_exc()
+        mainlog.error(msg)
 
 
 class IPv4Server(NetworkServer):
@@ -493,170 +564,3 @@ def PollNetwork():
     
     # Check for timed-out connections
     App.Connections.ScanForTimeouts()
-
-##
-## Basic packet handlers
-##
-
-class PacketRejector(Packets.PacketHandler):
-    '''Rejects any packets passed to this handler.'''
-    
-    def HandlePacket(self, packet):
-        # log the event
-        args = (packet.Connection.Address, packet.PacketType)
-        msg = "%s - Unhandled packet type %i received." % args
-        mainlog.warning(msg)
-        
-        # close the connection
-        packet.Connection.close()
-
-
-class KeepAliveHandler(Packets.PacketHandler):
-    '''Handles server-side KeepAlive packet events.'''
-    
-    def HandlePacket(self, packet):
-        # make sure this is a keep-alive packet
-        if packet.PacketType != Packets.KeepAlive:
-            msg = "Packet with type %i passed to KeepAliveHandler."
-            msg %= packet.PacketType
-            mainlog.error(msg)
-            raise TypeError(msg)
-        
-        # reply with a keep-alive packet of our own
-        reply = Packets.KeepAlivePacket(packet.Connection)
-        packet.Connection.SendPacket(reply)
-
-
-class ConnectionNegotiationHandler(Packets.PacketHandler):
-    '''
-    Handles the connection negotiation for a single connection.
-    '''
-    
-    def HandlePacket(self, packet):
-        # Make sure this is a NegotiateConnection packet
-        if packet.PacketType != Packets.NegotiateConnection:
-            msg = "Packet with type %i passed to ConnectionNegotiationHandler."
-            msg %= packet.PacketType
-            mainlog.error(msg)
-            raise TypeError(msg)
-        
-        # Perform a version check
-        if packet.Signature != Packets.ProtocolSignature:
-            # Protocol signature mismatch, error 3
-            args = (packet.Connection.Address,
-                    Packets.ConnectionRejectedPacket.Error_Signature)
-            msg = "%s - Connection rejected (error %i, signature mismatch)."
-            msg %= args
-            mainlog.info(msg)
-            
-            reply = Packets.ConnectionRejectedPacket(packet.Connection)
-            reply.RejectionCode = reply.Error_Signature
-            packet.Connection.SendPacket(reply)
-            packet.Connection.close()
-            return
-        elif packet.Revision != Packets.ProtocolRevision:
-            # Protocol revision mismatch, error 2
-            args = (packet.Connection.Address,
-                    Packets.ConnectionRejectedPacket.Error_Revision)
-            msg = "%s - Connection rejected (error %i, revision mismatch)."
-            msg %= args
-            mainlog.info(msg)
-            
-            reply = Packets.ConnectionRejectedPacket(packet.Connection)
-            reply.RejectionCode = reply.Error_Revision
-            packet.Connection.SendPacket(reply)
-            packet.Connection.close()
-            return
-        elif (packet.MajorVersion != Version.MajorVersion or
-              packet.MinorVersion != Version.MinorVersion):
-            # Version mismatch, error 1
-            args = (packet.Connection.Address,
-                    Packets.ConnectionRejectedPacket.Error_Outdated)
-            msg = "%s - Connection rejected (error %i, version mismatch)."
-            msg %= args
-            mainlog.info(msg)
-            
-            reply = Packets.ConnectionRejectedPacket(packet.Connection)
-            reply.RejectionCode = reply.Error_Outdated
-            packet.Connection.SendPacket(reply)
-            packet.Connection.close()
-            return
-        
-        # Accept the connection
-        App = ServerGlobals.Application
-        reply = Packets.ConnectionAcceptedPacket(packet.Connection)
-        reply.ServerName = App.Config['General/ServerName']
-        reply.ServerNewsURL = App.Config['General/ServerNewsURL']
-        # TODO: Add "no-register" flag support
-        reply.SendPacket()
-        packet.Connection.SetState(State_WaitForLogin)
-
-
-##
-## Packet routers
-##
-
-class BaseServerPacketRouter(Packets.PacketRouter):
-    '''
-    Base server packet router.  This automatically rejects all packets.
-    
-    Subclass this to create state-specific packet routers.
-    '''
-    
-    def __init__(self):
-        # Inherit from base class.
-        super(BaseServerPacketRouter, self).__init__()
-        
-        # Set default packet handler.
-        self.DefaultHandler = PacketRejector()
-        
-        # Create our keep-alive handler.
-        self.Handlers[Packets.KeepAlive] = KeepAliveHandler()
-
-
-class ConnectionNegotiationRouter(BaseServerPacketRouter):
-    '''
-    Single-connection packet router for the connection negotiation state.
-    
-    A separate object of this class should be created for each connection, as
-    these objects track internal state.  (Actually, they DON'T in this case
-    since the server only has a single task during the negotiation state, but
-    it's good practice anyway.)
-    '''
-    
-    def __init__(self):
-        # Inherit from base class.
-        super(ConnectionNegotiationRouter, self).__init__()
-        
-        # Set up negotiation handlers.
-        negotiate = ConnectionNegotiationHandler()
-        self.Handlers[Packets.NegotiateConnection] = negotiate
-        
-        # Strike the keep-alive handler (not allowed before negotiation).
-        del self.Handlers[Packets.KeepAlive]
-
-
-class WaitForLoginRouter(BaseServerPacketRouter):
-    '''
-    Single-connection packet router for the wait-for-login state.
-    '''
-    
-    def __init__(self):
-        # Inherit from base class.
-        super(WaitForLoginRouter, self).__init__()
-        
-        # Set up login handlers.
-        # TODO: Implement
-
-
-StateRouters = {
-                State_Negotiate: ConnectionNegotiationRouter,
-                State_WaitForLogin: WaitForLoginRouter,
-                State_Login: None,                          # TODO: Implement
-                State_CharacterSelect: None,                # TODO: Implement
-                State_CharacterCreate: None,                # TODO: Implement
-                State_Game: None,                           # TODO: Implement
-               }
-'''
-Maps connection states to their packet router classes.
-'''
