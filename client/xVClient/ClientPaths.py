@@ -1,5 +1,5 @@
 # xVector Engine Client
-# Copyright (c) 2010 James Buchwald
+# Copyright (c) 2011 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,6 +19,7 @@
 Contains functions that find the engine's needed filepaths.
 """
 
+import sys
 import os
 import re
 from xVLib import Directories
@@ -27,9 +28,20 @@ from xVLib import Directories
 BaseUserPath = os.path.join(os.path.expanduser("~"), ".xvector")
 '''Path of folder containing user files.'''
 
-BaseMasterPath = os.path.join(os.path.split(__file__)[0], "res")
-'''Path to the master (non-user) files.'''
+# detect if we're running in a frozen executable
+if __file__.find('library.zip') < 0:
+    # running as a native python script
+    print "[debug] detected running as native python script"
+    BaseMasterPath = os.path.join(os.path.split(__file__)[0], "res")
+    '''Path to the master (non-user) files.'''
+else:
+    # running as a frozen executable
+    print "[debug] detected running as frozen executable"
+    BaseMasterPath = os.path.join(os.path.split(sys.executable)[0], 'res')
+    '''Path to the master (non-user) files.'''
+    
 
+BaseAltMasterPath = os.path.join(os.path.split(sys.executable)[0], 'res')
 
 ##
 ## Various default resource files

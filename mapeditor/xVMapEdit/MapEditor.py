@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 # xVector Engine Map Editor
 # Copyright (c) 2011 James Buchwald
@@ -114,7 +114,13 @@ class MapEditorApp(object):
         return int((time.time() - self.basetime) * 1000)
 
 
-if __name__ == "__main__":
+def Main():
+    '''
+    Runs the application.
+    
+    This is normally called from the executable script
+    (bin/xVectorMapEditor.py).
+    '''
     # Run the application.
     app = MapEditorApp()
     EditorGlobals.MainApp = app

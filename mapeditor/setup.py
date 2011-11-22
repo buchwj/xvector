@@ -18,6 +18,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA. 
 
 from distutils.core import setup
+import sys
 
 long_description = "The xVector Engine is an open source 2D MMORPG engine "
 long_description += "programmed in Python.  xVector makes it easy to create "
@@ -36,6 +37,20 @@ for triple in os.walk(startpath):
     for singlefile in dirfiles:
         if singlefile[len(singlefile)-1] != '~':
             resfiles.append(os.path.join(base, singlefile))
+
+# set up cx_freeze
+try:
+    from cx_Freeze import setup, Executable
+    if sys.platform == "win32":
+        base = "Win32GUI"
+    else:
+        base = None
+    executables = [Executable('bin/xVectorMapEditor.py', base=base)]
+    scripts = None
+except ImportError:
+    # cx_freeze not installed
+    executables = None
+    scripts = ['bin/xVectorMapEditor.py']
 
 setup(name='xVMapEdit',
       author='James R. Buchwald',
@@ -58,7 +73,8 @@ setup(name='xVMapEdit',
       ],
       
       packages=['xVMapEdit', 'xVMapEdit.ui'],
-      scripts=['xVMapEdit/MapEditor.py'],
+      scripts=scripts,
+      executables=executables,
       package_data={'xVMapEdit.ui': ['*.ui'],
                     'xVMapEdit': resfiles},
       data_files=[('', ['LICENSE', 'CREDITS', 'KNOWN-ISSUES'])],
