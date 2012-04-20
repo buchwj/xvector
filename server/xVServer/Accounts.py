@@ -90,8 +90,8 @@ class Account(Database.Base):
         return base64.b64decode(self.B64PasswordHash)
     
     @PasswordHash.setter
-    def PasswordHash(self, hash):
-        self.B64PasswordHash = base64.b64encode(hash)
+    def PasswordHash(self, phash):
+        self.B64PasswordHash = base64.b64encode(phash)
     
     @property
     def PasswordSalt(self):
@@ -99,8 +99,8 @@ class Account(Database.Base):
         return base64.b64decode(self.B64PasswordSalt)
     
     @PasswordSalt.setter
-    def PasswordSalt(self, hash):
-        self.B64PasswordSalt = base64.b64encode(hash)
+    def PasswordSalt(self, phash):
+        self.B64PasswordSalt = base64.b64encode(phash)
 
 
 class UsernameTaken(Exception): pass
@@ -151,7 +151,7 @@ def Register(username, passwordhash, salt, email, creator):
         raise UsernameTaken
     
     # Do a (very simple) check of the email address
-    if email.find('@') == -1:
+    if email.find('@') <= 0:
         raise ValueError("Invalid email address specified.")
     
     # Register!

@@ -54,7 +54,7 @@ class WaitForLoginRouter(ServerPacketRouter.BaseServerPacketRouter):
         self.Handlers[Packets.StartLogin] = StartLoginHandler
         self.Handlers[Packets.Register] = RegisterHandler
 
-    
+
 def GenerateChallenge():
     '''
     Generates a random login challenge.

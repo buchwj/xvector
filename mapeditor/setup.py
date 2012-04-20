@@ -27,6 +27,9 @@ long_description += "experience while also providing developers with a "
 long_description += "powerful plugin and scripting API.  This package provides"
 long_description += " the map editor used to develop content for the engine."
 
+# Create a blank set of distutils options
+options = {}
+
 # okay, we need to find our data files
 import os
 resfiles = []
@@ -39,16 +42,35 @@ for triple in os.walk(startpath):
             resfiles.append(os.path.join(base, singlefile))
 
 # set up cx_freeze
+outdir = 'build'
 try:
     from cx_Freeze import setup, Executable
     if sys.platform == "win32":
         base = "Win32GUI"
-    else:
+        outdir = os.path.join(outdir, 'win32')
+    elif sys.platform.startswith('linux'):
         base = None
-    executables = [Executable('bin/xVectorMapEditor.py', base=base)]
+        outdir = os.path.join(outdir, 'linux')
+    elif sys.platform == 'darwin':
+        # Please note that Mac OS X is not officially supported.
+        # We simply provide build recognition for it here.
+        print "warning: please note that Mac OS X is not officially supported"
+        print "         by the development team at this time."
+        base = None
+        outdir = os.path.join(outdir, 'osx')
+    else:
+        # If the platform is unknown, we definitely don't support it.
+        print "warning: your platform is unrecognized."
+        base = None
+        outdir = os.path.join(outdir, 'other')
+    executables = [Executable('bin/xVectorMapEditor.py',
+                              base=base, targetDir=outdir,
+                              copyDependentFiles=True)]
     scripts = None
+    options['build_exe'] = {'build_exe': outdir}
 except ImportError:
     # cx_freeze not installed
+    print "warning: cx_Freeze not found.  Executable build disabled."
     executables = None
     scripts = ['bin/xVectorMapEditor.py']
 
@@ -75,6 +97,7 @@ setup(name='xVMapEdit',
       packages=['xVMapEdit', 'xVMapEdit.ui'],
       scripts=scripts,
       executables=executables,
+      options=options,
       package_data={'xVMapEdit.ui': ['*.ui'],
                     'xVMapEdit': resfiles},
       data_files=[('', ['LICENSE', 'CREDITS', 'KNOWN-ISSUES'])],

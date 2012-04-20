@@ -26,6 +26,7 @@ import sys
 import time
 import asyncore
 from xVLib import Networking, Packets
+from PyQt4 import QtGui
 from . import ClientGlobals
 
 mainlog = logging.getLogger("Client.Main")
@@ -152,6 +153,24 @@ class ClientConnectionHandler(Networking.BaseConnectionHandler):
         App = ClientGlobals.Application
         App.Connection = None
         App.MainWindow.ChangeState(App.MainWindow.State_Startup)
+    
+    def OnValidateRemoteKey(self):
+        # check if the server is using the development key
+        fingerprint = self.GetKeyFingerprint()
+        if fingerprint == Networking.DEFAULT_KEY_FINGERPRINT:
+            # match; warn the user and ask for permission to continue
+            title = "Security Warning"
+            message = """You are attempting to login to a server which is using
+            the default development private key for encryption.  By connecting
+            to this server, your login information may be compromised by a
+            third party.  Do you wish to continue connecting to the server?"""
+            buttons = QtGui.QMessageBox.Yes | QtGui.QMessageBox.No
+            response = QtGui.QMessageBox.warning(None, title, message, buttons,
+                                                 QtGui.QMessageBox.No)
+            return (response == QtGui.QMessageBox.Yes)
+        
+        # no match; we're good
+        return True
 
 
 class ConnectionFailed(Exception): pass

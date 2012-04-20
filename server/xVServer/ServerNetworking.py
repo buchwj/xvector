@@ -194,6 +194,16 @@ class ServerConnection(Networking.BaseConnectionHandler):
             pass
     
     ##
+    ## crypto stuff
+    ##
+    
+    def WrapTLS(self):
+        '''
+        Encrypts the connection in a TLS layer.
+        '''
+        
+    
+    ##
     ## reimplemented methods from asyncore.dispatcher
     ##
     

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # xVector Engine Client
 # Copyright (c) 2011 James Buchwald
 
@@ -107,8 +105,9 @@ class ClientApplication(object):
         return retval
 
 
-if __name__ == "__main__":
+def Main():
     superapp = ClientApplication()
     ClientGlobals.Application = superapp
     retcode = superapp.Main()
     sys.exit(retcode)
+

@@ -30,6 +30,10 @@ from xVServer import Database
 from xVLib import Version
 from xVLib.ConfigurationFile import ConfigurationFile
 
+if sys.platform == "win32":
+    import win32service, win32event
+    import subprocess
+
 mainlog = logging.getLogger("Server.Main")
 
 class _EarlyServerExit(Exception): pass
@@ -58,6 +62,19 @@ class ServerApplication(object):
         '''If running in daemon mode, the path to run under.'''
         self.CreateTables = False
         '''If set to True, will try to create DB tables and then exit.'''
+        
+        ##
+        ## NT service configuration attributes (for Win32 only)
+        ##
+        if sys.platform == "win32":
+            self.ServiceName = None
+            '''Name of the NT service.'''
+            self.InstallService = False
+            '''If True, install the specified NT service.'''
+            self.StartService = False
+            '''If True, run as an NT service.'''
+            self.UninstallService = False
+            '''If True, uninstall the specified NT service.'''
         
         ##
         ## Runtime attributes
@@ -111,6 +128,9 @@ class ServerApplication(object):
                 elif prevArg == "--daemon-path":
                     # value is the daemon root path
                     self.DaemonPath = arg
+                elif prevArg == "--service-name":
+                    # value is the name of the NT service
+                    self.ServiceName = arg
                 nextIsValue = False
             else:
                 # this is an argument
@@ -161,6 +181,21 @@ class ServerApplication(object):
                         nextIsValue = True
                 elif arg == "--createtables":
                     self.CreateTables = True
+                elif arg == "--service-install":
+                    if sys.platform == "win32":
+                        self.InstallService = True
+                elif arg == "--service-start":
+                    # "Hidden" command not shown in help.
+                    # This should only be called by Windows when the service
+                    # is started.
+                    if sys.platform == "win32":
+                        self.StartService = True
+                elif arg == "--service-uninstall":
+                    if sys.platform == "win32":
+                        self.UninstallService = True
+                elif arg == "--service-name":
+                    if sys.platform == "win32":
+                        nextIsValue = True
                 else:
                     # unknown argument.
                     print "Unrecognized argument %s\n" % arg
@@ -202,6 +237,11 @@ class ServerApplication(object):
             print "\t--daemon-user [user]\tUser to run daemon as."
             print "\t--daemon-pid [file]\tPID file to track daemon with."
             print "\t--daemon-path [dir]\tPath to run daemon under."
+        else:
+            # NT service mode available
+            print "\t--service-install\tInstall as an NT service."
+            print "\t--service-uninstall\tUninstall the NT service."
+            print "\t--service-name\t\tName of the NT service."
         
         print "\nDatabase management commands:"
         print "\t--createtables\t\tCreate all database tables and exit."
@@ -217,6 +257,94 @@ class ServerApplication(object):
         print "NO WARRANTY.  Licensed under the GNU General Public License v2."
         print "You MUST accept the terms of the license to use the program."
         print "See the LICENSE file shipped with the program for the license."
+
+    if sys.platform == "win32":
+        
+        def InstallService(self, name):
+            '''
+            Installs the server as an NT service with the given name.
+            
+            @type name: string
+            @param name: Name of the NT service to install.
+            '''
+            # get handle to the service manager
+            mgr = win32service.OpenSCManager(None,  # local computer
+                                             None,
+                                            win32service.SC_MANAGER_ALL_ACCESS)
+            if mgr == None:
+                err = "Could not get handle to service manager."
+                mainlog.critical(err)
+                raise _EarlyServerExit
+            
+            # figure out what command to use
+            if __file__.find("library.zip") > 0:
+                # running as frozen executable
+                cmd = sys.executable
+            else:
+                # running as native script
+                cmd = sys.executable + sys.argv[0]
+            for arg in sys.argv[1:]:
+                if arg == "--service-install":
+                    continue
+                cmd += " %s" % arg
+            cmd += " --service-run"
+            
+            # create the service
+            service = win32service.CreateService(
+                                mgr,
+                                self.ServiceName, self.ServiceName,
+                                win32service.SERVICE_ALL_ACCESS,
+                                win32service.SERVICE_WIN32_OWN_PROCESS,
+                                win32service.SERVICE_AUTO_START,
+                                win32service.SERVICE_ERROR_NORMAL,
+                                cmd, None, None, None, None, None)
+            if service == None:
+                # failed to create the service
+                mainlog.critical("Could not install the NT service.")
+                win32service.CloseServiceHandle(mgr)
+                raise _EarlyServerExit
+            
+            # clean up
+            win32service.CloseServiceHandle(mgr)
+            win32service.CloseServiceHandle(service)
+        
+        def UninstallService(self, name):
+            '''
+            Uninstalls the NT service with the given name.
+            '''
+            # grab a handle to the manager
+            try:
+                mgr = win32service.OpenSCManager(None, None,
+                                            win32service.SC_MANAGER_ALL_ACCESS)
+            except win32service.error as err:
+                msg = "Failed to open service manager: %s" % err[2]
+                mainlog.critical(msg)
+                raise _EarlyServerExit
+            
+            # get a handle to the service
+            try:
+                svc = win32service.OpenService(mgr, name,
+                                               win32service.SERVICE_ALL_ACCESS)
+            except win32service.error as err:
+                msg = "Failed to open service: %s" % err[2]
+                mainlog.critical(msg)
+                raise _EarlyServerExit
+            
+            # stop the service if needed
+            state = win32service.QueryServiceStatus(svc)
+            if state.dwCurrentState != win32service.SERVICE_STOPPED:
+                try:
+                    win32service.ControlService(svc, 
+                                             win32service.SERVICE_CONTROL_STOP)
+                except win32service.error as err:
+                    msg = "Failed to stop service: %s" % err[2]
+                    mainlog.error(msg)
+            
+            # delete the service
+            try:
+                win32service.DeleteService(svc)
+            except win32service.error as err:
+                msg = "Failed to remove service: %s" % err[2]
     
     def ConfigureLogger(self):
         '''Configures the logger.'''
@@ -232,8 +360,8 @@ class ServerApplication(object):
         maxbytes = self.Config['Logging/Rotator/MaxSize']
         maxlogs = self.Config['Logging/Rotator/LogCount']
         MainHandler = handlers.RotatingFileHandler(baselogpath,
-                                                           maxBytes=maxbytes,
-                                                           backupCount=maxlogs)
+                                                   maxBytes=maxbytes,
+                                                   backupCount=maxlogs)
         MainHandler.setFormatter(formatter)
         MainFilter = logging.Filter("Server.Main")
         MainHandler.addFilter(MainFilter)
@@ -245,8 +373,8 @@ class ServerApplication(object):
         chatlogpath = os.path.join(self.Config['Logging/Directory'], 
                                    "chat.log")
         ChatHandler = handlers.RotatingFileHandler(chatlogpath,
-                                                           maxBytes=maxbytes,
-                                                           backupCount=maxlogs)
+                                                   maxBytes=maxbytes,
+                                                   backupCount=maxlogs)
         ChatFilter = logging.Filter("Server.Chat")
         ChatHandler.addFilter(ChatFilter)
         ChatHandler.setFormatter(formatter)
