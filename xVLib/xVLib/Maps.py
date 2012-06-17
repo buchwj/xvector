@@ -458,7 +458,7 @@ class BaseMap(object):
             # we can only have a maximum tilecount of w*h*d...
             # (it's kinda like the Pauli Exclusion Principle...)
             # ALL TILES MUST HAVE UNIQUE QUANTUM STATES!!!
-            for tilenum in range(self.Width * self.Height * self.Depth):
+            for tilenum in xrange(self.Width * self.Height * self.Depth):
                 # read in the next tile
                 try:
                     tile = Tile().Deserialize(fileobj, formatver)

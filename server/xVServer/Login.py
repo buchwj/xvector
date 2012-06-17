@@ -1,5 +1,5 @@
 # xVector Engine Server
-# Copyright (c) 2011 James Buchwald
+# Copyright (c) 2012 James Buchwald
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -61,7 +61,7 @@ def GenerateChallenge():
     '''
     return os.urandom(ChallengeLength)
 
-    
+
 def StartLoginHandler(packet):
     '''
     Packet handler for the StartLogin packet type.

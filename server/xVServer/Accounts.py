@@ -43,7 +43,7 @@ class Account(Database.Base):
     ## Database configuration
     ##
     __tablename__ = "accounts"
-    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, primary_key=True)
     '''User ID.'''
     
     ##

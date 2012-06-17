@@ -88,6 +88,7 @@ BadLogin = 33
 DeleteCharacter = 34
 StartCharacterList = 35
 InvalidRequest = 36
+UserNotFound = 37
 
 MAX_VALID_PACKET = InvalidRequest
 '''Highest allowed value of a packet type, used for validation.'''
@@ -933,7 +934,8 @@ class PacketRouter(PacketHandler):
             handler = self.Handlers[ptype]
         except KeyError:
             # no, don't have it, pass it off to the default handler
-            self.DefaultHandler(packet)
+            if self.DefaultHandler:
+                self.DefaultHandler(packet)
             return
         
         # We handle it; call the handler function.

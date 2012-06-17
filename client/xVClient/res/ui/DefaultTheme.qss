@@ -17,10 +17,10 @@
 \*****************************************************************************/
 
 /*****************************************************************************\
- * SECTION 1: Basic Widget Styles
- *
- * These settings apply to various general widgets if no other style rules
- * match the widget.
+ * SECTION 1: Basic Widget Styles                                            *
+ *                                                                           *
+ * These settings apply to various general widgets if no other style rules   *
+ * match the widget.                                                         *
 \*****************************************************************************/
 
 /*
@@ -98,4 +98,17 @@ QWidget#MetaserverWidget
 QWidget#PrivateServerWidget
 {
     background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(20,20,20,200), stop: 1 rgba(40,40,40,200));
+}
+
+/*****************************************************************************\
+ * SECTION 3: Message Boxes                                                  *
+ *                                                                           *
+ * This section defines the style of any message boxes (such as errors) that *
+ * pop up.                                                                   *
+\*****************************************************************************/
+
+QMessageBox
+{
+	color: rgb(220,220,220);
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(20,20,20,200), stop: 1 rgba(40,40,40,200));
 }
