@@ -21,6 +21,7 @@ Login processing with network code to support it.
 
 import time
 import os
+import base64
 from xVLib import Packets
 from . import ServerPacketRouter, Database, Accounts
 from .Accounts import Account
@@ -35,6 +36,37 @@ ChallengeLength = 32
 
 LoginDelay = 5
 '''Minimum number of seconds between login attempts.'''
+
+
+##
+## Login token management system
+##
+
+class LoginToken(object):
+    '''
+    A login token for authentication.
+    '''
+    
+    TOKEN_VALID_LENGTH = 30.0
+    '''Length of time the token is valid for, in seconds.'''
+    
+    def __init__(self):
+        '''
+        Creates a new login token with a random value.
+        '''
+        # Declare the new token.
+        self.Value = base64.b64encode(os.urandom(24))
+        '''Identifier value of the login token (32 characters)'''
+        self.IssuedAt = time.time()
+        '''Time at which the login token was issued.'''
+    
+    def IsValid(self):
+        '''
+        Checks whether the login token has expired.
+        
+        @return: True if the token is valid, False if it has expired.
+        '''
+        return (time.time() - self.IssuedAt < self.TOKEN_VALID_LENGTH)
 
 
 ##
