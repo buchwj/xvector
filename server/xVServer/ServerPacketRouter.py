@@ -41,7 +41,7 @@ def PacketRejector(packet):
     # close the connection
     packet.Connection.close()
 
-    
+
 def KeepAliveHandler(self, packet):
     '''
     Packet handler for the KeepAlive packet type.

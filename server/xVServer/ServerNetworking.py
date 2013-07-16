@@ -25,6 +25,7 @@ import logging
 import traceback
 import asyncore
 import socket
+import sys
 
 from xVLib import Networking
 from . import ServerGlobals, IPBans, ConnectionNegotiation, Login
@@ -520,6 +521,15 @@ class IPv4Server(NetworkServer):
 class IPv6Server(NetworkServer):
     '''
     Network server class for IPv6 connections.
+    
+    @warn
+    Due to a bug in current Win32 releases of Python, IPv6 support is unstable
+    for xVector servers running on Windows. This bug arises because the latest
+    versions of the Windows SDK support the IPPROTO_IPV6 flag on Windows XP and
+    above, while the 32-bit releases of Python are built to support Windows
+    2000 and later.  xVector gets around this by self-defining the constant if
+    Windows is detected; this will be fixed as soon as possible.  For more
+    information, please see http://bugs.python.org/issue6926.
     '''
     
     def __init__(self):
@@ -538,7 +548,12 @@ class IPv6Server(NetworkServer):
             
             # Limit to IPv6 only (this is an easy way to separate IPv4/IPv6 on
             # multiple platforms)
-            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+            ##### This next portion is a rather hackish fix.
+            if sys.platform == "win32":
+                IPPROTO_IPV6 = 41   # hack!
+            else:
+                IPPROTO_IPV6 = socket.IPPROTO_IPV6
+            self.socket.setsockopt(IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         except socket.error as err:
             msg = "Could not create listening socket: %s" % err.args[1]
             mainlog.critical(msg)
